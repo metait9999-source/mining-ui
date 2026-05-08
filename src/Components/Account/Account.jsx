@@ -2,7 +2,6 @@ import React, { useEffect, useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import useWallets from "../../hooks/useWallets";
 import { useUser } from "../../context/UserContext";
-import useCryptoTradeConverter from "../../hooks/userCryptoTradeConverter";
 import axios from "axios";
 import { API_BASE_URL } from "../../api/getApiURL";
 import { MdVerified } from "react-icons/md";
@@ -54,31 +53,73 @@ function Account() {
   const { wallets } = useWallets(user?.id);
   const [searchTerm, setSearchTerm] = useState("");
   const [coinValues, setCoinValues] = useState({});
-  const { convertUSDTToCoin } = useCryptoTradeConverter();
   const [balanceVisible, setBalanceVisible] = useState(
     () => user?.balance_visible === 1 || user?.balance_visible === true,
   );
   const convertedRef = useRef(false);
 
+  const COINLORE_IDS = {
+    BTC: 90,
+    ETH: 80,
+    TRX: 87,
+    USDT: 518,
+    "USDT-TRC20": 518,
+    "USDT-ERC20": 518,
+    BNB: 2710,
+    XRP: 58,
+    SOL: 48543,
+  };
+
   useEffect(() => {
     if (!wallets?.length) return;
-    if (convertedRef.current) return; // ← already done, skip
+    if (convertedRef.current) return;
     convertedRef.current = true;
 
     const fetchConvertedValues = async () => {
       const result = {};
       for (const w of wallets) {
         try {
-          result[w.coin_id] = await convertUSDTToCoin(w.coin_amount, w.coin_id);
+          const symbol = w.coin_symbol?.toUpperCase();
+
+          // USDT variants — no conversion needed
+          if (
+            ["USDT", "USDT-TRC20", "USDT-ERC20"].includes(symbol) ||
+            ["USDT", "USDT-TRC20", "USDT-ERC20"].includes(w.coin_id)
+          ) {
+            result[w.coin_id] = parseFloat(w.coin_amount || 0).toFixed(4);
+            continue;
+          }
+
+          // Get coinlore ID
+          const coinloreId = COINLORE_IDS[symbol] || COINLORE_IDS[w.coin_id];
+          if (!coinloreId) {
+            result[w.coin_id] = parseFloat(w.coin_amount || 0).toFixed(4);
+            continue;
+          }
+
+          // Fetch price
+          const res = await fetch(
+            `https://api.coinlore.net/api/ticker/?id=${coinloreId}`,
+          );
+          const data = await res.json();
+          const price = parseFloat(data?.[0]?.price_usd || 0);
+
+          if (price > 0) {
+            // USD amount ÷ coin price = coin amount
+            const coinAmount = parseFloat(w.coin_amount || 0) / price;
+            result[w.coin_id] = coinAmount.toFixed(8);
+          } else {
+            result[w.coin_id] = "0.00000000";
+          }
         } catch {
-          result[w.coin_id] = null;
+          result[w.coin_id] = "0.00000000";
         }
       }
       setCoinValues(result);
     };
 
     fetchConvertedValues();
-  }, [wallets?.length, convertUSDTToCoin, wallets]);
+  }, [wallets?.length]);
 
   const toggleBalance = async () => {
     const next = !balanceVisible;
@@ -530,13 +571,21 @@ function Account() {
                   </div>
 
                   {/* Coin amount — desktop column, mobile hidden */}
+                  {/* Coin amount — desktop column, mobile hidden */}
                   <div className="hidden md:block md:col-span-3 text-right">
                     <p
                       className="raj font-medium"
                       style={{ color: "#64748b", fontSize: 14 }}
                     >
                       {balanceVisible
-                        ? `${coinValues[wallet.coin_id] !== undefined ? coinValues[wallet.coin_id] : "0.0000"} ${wallet.coin_symbol}`
+                        ? (() => {
+                            const coinAmt = coinValues[wallet.coin_id];
+
+                            if (wallet.coin_symbol === "USDT") {
+                              return `${parseFloat(wallet.coin_amount || 0).toFixed(4)} USDT`;
+                            }
+                            return `${coinAmt !== undefined && coinAmt !== null ? coinAmt : "0.0000"} ${wallet.coin_symbol}`;
+                          })()
                         : `•••• ${wallet.coin_symbol}`}
                     </p>
                   </div>

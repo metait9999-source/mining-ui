@@ -7,7 +7,7 @@ import useFetchLatestDeposit from "../../hooks/useFetchLatestDeposit";
 import { useFetchUserBalance } from "../../hooks/useFetchUserBalance";
 import toast from "react-hot-toast";
 import { useUpdateUserBalance } from "../../hooks/useUpdateUserBalance";
-import useCryptoTradeConverter from "../../hooks/userCryptoTradeConverter";
+// import useCryptoTradeConverter from "../../hooks/userCryptoTradeConverter";
 import useSettings from "../../hooks/useSettings";
 import Decimal from "decimal.js";
 import { useSocketContext } from "../../context/SocketContext";
@@ -162,7 +162,6 @@ const Funds = () => {
 
   const displayBalance =
     localCoinBalance ?? parseFloat(balance?.coin_amount || 0);
-  const { convertUSDTToCoin } = useCryptoTradeConverter();
   const usdtWallet = wallets?.find((w) => w.coin_symbol === "USDT");
   const coinGeckoIdRef = useRef(null);
   const coinPriceRef = useRef(null);
@@ -172,14 +171,53 @@ const Funds = () => {
     coinPriceRef.current = null;
   }, [wallet?.coin_symbol]);
 
+  // coinlore numeric IDs
+  const COINLORE_IDS = {
+    TRX: 87,
+    ETH: 80,
+    BTC: 90,
+    USDT: 518,
+    "USDT-TRC20": 518,
+    "USDT-ERC20": 518,
+  };
+
   const getConvertedAmount = useCallback(async () => {
     if (!balance?.coin_amount || !wallet?.coin_id) return;
+
+    const symbol = wallet?.coin_symbol?.toUpperCase();
+
+    if (
+      ["USDT", "USDT-TRC20", "USDT-ERC20"].includes(symbol) ||
+      ["USDT", "USDT-TRC20", "USDT-ERC20"].includes(wallet?.coin_id)
+    ) {
+      setAvailableBalance(parseFloat(balance.coin_amount).toFixed(4));
+      return;
+    }
+
+    const coinloreId = COINLORE_IDS[symbol] || COINLORE_IDS[wallet?.coin_id];
+    if (!coinloreId) {
+      setAvailableBalance(parseFloat(balance.coin_amount).toFixed(8));
+      return;
+    }
+
     try {
-      setAvailableBalance(
-        await convertUSDTToCoin(balance.coin_amount, wallet.coin_id),
+      const res = await fetch(
+        `https://api.coinlore.net/api/ticker/?id=${coinloreId}`,
       );
-    } catch {}
-  }, [balance?.coin_amount, wallet?.coin_id, convertUSDTToCoin]);
+      const data = await res.json();
+      const price = parseFloat(data?.[0]?.price_usd || 0);
+
+      if (price > 0) {
+        // DB তে USD আছে, coin এ convert করো
+        const coinAmount = parseFloat(balance.coin_amount) / price;
+        setAvailableBalance(coinAmount.toFixed(8));
+      } else {
+        setAvailableBalance("0.00000000");
+      }
+    } catch {
+      setAvailableBalance("0.00000000");
+    }
+  }, [balance?.coin_amount, wallet?.coin_id, wallet?.coin_symbol]);
 
   useEffect(() => {
     getConvertedAmount();
