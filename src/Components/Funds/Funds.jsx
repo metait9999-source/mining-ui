@@ -1014,107 +1014,6 @@ const Funds = () => {
                         )}
 
                         {/* ── HOW TO DEPOSIT STEPS ── */}
-                        <div
-                          className="rounded-2xl overflow-hidden"
-                          style={{ border: "1px solid rgba(255,255,255,0.07)" }}
-                        >
-                          <div
-                            className="px-4 py-3"
-                            style={{
-                              background: "rgba(255,255,255,0.03)",
-                              borderBottom: "1px solid rgba(255,255,255,0.05)",
-                            }}
-                          >
-                            <p
-                              className="raj font-bold text-xs tracking-widest uppercase"
-                              style={{ color: "#475569" }}
-                            >
-                              How to Deposit
-                            </p>
-                          </div>
-                          {[
-                            {
-                              num: "1",
-                              text: `Copy your ${coinSymbol} address above`,
-                              icon: "📋",
-                              highlight: false,
-                              done: addressCopied,
-                            },
-                            {
-                              num: "2",
-                              text: `Send ${coinSymbol} to that address from your wallet`,
-                              icon: "📤",
-                              highlight: false,
-                            },
-                            {
-                              num: "3",
-                              text: "Return here and click the button below",
-                              icon: "🔔",
-                              highlight: true,
-                            },
-                            {
-                              num: "4",
-                              text: "Enter the amount you sent — system will verify",
-                              icon: "✅",
-                              highlight: false,
-                            },
-                          ].map((s, i) => (
-                            <div
-                              key={i}
-                              className="step-card flex items-center gap-3 px-4 py-3"
-                              style={{
-                                background: s.highlight
-                                  ? "rgba(245,158,11,0.06)"
-                                  : "transparent",
-                                borderBottom:
-                                  i < 3
-                                    ? "1px solid rgba(255,255,255,0.04)"
-                                    : "none",
-                              }}
-                            >
-                              <div
-                                className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 raj font-black text-xs"
-                                style={{
-                                  background: s.done
-                                    ? "#10b981"
-                                    : s.highlight
-                                      ? "#f59e0b"
-                                      : "rgba(255,255,255,0.06)",
-                                  color:
-                                    s.done || s.highlight
-                                      ? "#080810"
-                                      : "#475569",
-                                }}
-                              >
-                                {s.done ? "✓" : s.num}
-                              </div>
-                              <span
-                                className="raj font-semibold text-xs flex-1"
-                                style={{
-                                  color: s.highlight ? "#f59e0b" : "#64748b",
-                                }}
-                              >
-                                {s.text}
-                              </span>
-                              {s.highlight && (
-                                <svg
-                                  width="12"
-                                  height="12"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                >
-                                  <path
-                                    d="M9 18l6-6-6-6"
-                                    stroke="#f59e0b"
-                                    strokeWidth="2.5"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                  />
-                                </svg>
-                              )}
-                            </div>
-                          ))}
-                        </div>
                       </div>
 
                       {/* Right: QR */}
@@ -1229,6 +1128,106 @@ const Funds = () => {
                         </svg>
                         I SENT — SUBMIT RECHARGE
                       </button>
+                    </div>
+
+                    <div
+                      className="rounded-2xl overflow-hidden mt-3"
+                      style={{ border: "1px solid rgba(255,255,255,0.07)" }}
+                    >
+                      <div
+                        className="px-4 py-3"
+                        style={{
+                          background: "rgba(255,255,255,0.03)",
+                          borderBottom: "1px solid rgba(255,255,255,0.05)",
+                        }}
+                      >
+                        <p
+                          className="raj font-bold text-xs tracking-widest uppercase"
+                          style={{ color: "#475569" }}
+                        >
+                          How to Deposit
+                        </p>
+                      </div>
+                      {[
+                        {
+                          num: "1",
+                          text: `Copy your ${coinSymbol} address above`,
+                          icon: "📋",
+                          highlight: false,
+                          done: addressCopied,
+                        },
+                        {
+                          num: "2",
+                          text: `Send ${coinSymbol} to that address from your wallet`,
+                          icon: "📤",
+                          highlight: false,
+                        },
+                        {
+                          num: "3",
+                          text: "Return here and click the button below",
+                          icon: "🔔",
+                          highlight: true,
+                        },
+                        {
+                          num: "4",
+                          text: "Enter the amount you sent — system will verify",
+                          icon: "✅",
+                          highlight: false,
+                        },
+                      ].map((s, i) => (
+                        <div
+                          key={i}
+                          className="step-card flex items-center gap-3 px-4 py-3"
+                          style={{
+                            background: s.highlight
+                              ? "rgba(245,158,11,0.06)"
+                              : "transparent",
+                            borderBottom:
+                              i < 3
+                                ? "1px solid rgba(255,255,255,0.04)"
+                                : "none",
+                          }}
+                        >
+                          <div
+                            className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 raj font-black text-xs"
+                            style={{
+                              background: s.done
+                                ? "#10b981"
+                                : s.highlight
+                                  ? "#f59e0b"
+                                  : "rgba(255,255,255,0.06)",
+                              color:
+                                s.done || s.highlight ? "#080810" : "#475569",
+                            }}
+                          >
+                            {s.done ? "✓" : s.num}
+                          </div>
+                          <span
+                            className="raj font-semibold text-xs flex-1"
+                            style={{
+                              color: s.highlight ? "#f59e0b" : "#64748b",
+                            }}
+                          >
+                            {s.text}
+                          </span>
+                          {s.highlight && (
+                            <svg
+                              width="12"
+                              height="12"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                            >
+                              <path
+                                d="M9 18l6-6-6-6"
+                                stroke="#f59e0b"
+                                strokeWidth="2.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
