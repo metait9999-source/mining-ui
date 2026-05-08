@@ -50,7 +50,16 @@ const Settings = () => {
         if (!response.ok)
           throw new Error(`HTTP error! status: ${response.status}`);
         const data = await response.json();
-        setFormData(data);
+
+        // Only pick the fields you need, fallback if null
+        setFormData({
+          referral_deposit_bonus_status:
+            data.referral_deposit_bonus_status ?? "enabled",
+          referral_deposit_bonus: data.referral_deposit_bonus ?? "",
+          trade_amount_limit: data.trade_amount_limit ?? "",
+          deposit_limit: data.deposit_limit ?? "",
+          withdrawal_limit: data.withdrawal_limit ?? "",
+        });
       } catch (err) {
         console.error(err.message);
       } finally {
@@ -72,13 +81,15 @@ const Settings = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log(formData);
     try {
       await axios.put(`${API_BASE_URL}/settings`, {
-        referral_deposit_bonus_status: formData.referral_deposit_bonus_status,
-        referral_deposit_bonus: formData.referral_deposit_bonus,
-        trade_amount_limit: formData.trade_amount_limit,
-        deposit_limit: formData.deposit_limit,
-        withdrawal_limit: formData.withdrawal_limit,
+        referral_deposit_bonus_status:
+          formData.referral_deposit_bonus_status ?? "enabled",
+        referral_deposit_bonus: formData.referral_deposit_bonus ?? 0,
+        trade_amount_limit: formData.trade_amount_limit ?? 0,
+        deposit_limit: formData.deposit_limit ?? 0,
+        withdrawal_limit: formData.withdrawal_limit ?? 0,
       });
       toast.success("Settings saved successfully!");
       setRefreshSetting((p) => !p);
