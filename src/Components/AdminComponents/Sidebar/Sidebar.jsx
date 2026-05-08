@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useUser } from "../../../context/UserContext";
 import { FaSignOutAlt, FaUser, FaUsers, FaWallet } from "react-icons/fa";
-import { MdDashboard, MdOutlineAccountBalanceWallet } from "react-icons/md";
+import { MdDashboard } from "react-icons/md";
 import { IoChatbox, IoSettingsSharp, IoClose } from "react-icons/io5";
 import { PiHandDepositFill, PiHandWithdrawFill } from "react-icons/pi";
 import { HiMenuAlt2 } from "react-icons/hi";
@@ -112,12 +112,12 @@ const Sidebar = () => {
       icon: <MdDashboard size={19} />,
       permission: "Mining",
     },
-    {
-      to: "/panel/loans",
-      label: "Loans",
-      icon: <MdOutlineAccountBalanceWallet size={19} />,
-      permission: "Loans",
-    },
+    // {
+    //   to: "/panel/loans",
+    //   label: "Loans",
+    //   icon: <MdOutlineAccountBalanceWallet size={19} />,
+    //   permission: "Loans",
+    // },
     {
       to: "/panel/settings",
       label: "Edit Feature",

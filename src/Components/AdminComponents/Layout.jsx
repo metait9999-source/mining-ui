@@ -5,7 +5,7 @@ import AdminUsers from "./AdminUsers/AdminUsers";
 import Wallets from "./Wallets/Wallets";
 import Deposits from "./Deposits/Deposits";
 import Withdraws from "./Withdraws/Withdraws";
-import Trading from "./Trading/Trading";
+// import Trading from "./Trading/Trading";
 import AddNewWallet from "./Wallets/AddNewWallet";
 import EditWallet from "./Wallets/EditWallet";
 import Settings from "./Settings/Settings";
@@ -15,9 +15,10 @@ import SupportInbox from "./SupportInbox/SupportInbox";
 import { useUser } from "../../context/UserContext";
 import ArbitrageDashboard from "./Arbitrage/ArbitrageDashboard";
 import MiningDashboard from "./Mining/MiningDashboard";
-import Loans from "./Loan/Loans";
+// import Loans from "./Loan/Loans";
 import ChatFAQs from "./ChatFaq/ChatFaq";
 import DepositToast from "./Sidebar/DepositToast";
+import AdminDashboard from "./AdminDashboard/AdminDashboard";
 
 const Layout = () => {
   const { adminUser } = useUser();
@@ -72,7 +73,7 @@ const Layout = () => {
         {/* ── Scrollable content ── */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-5 md:p-6 lg:p-7 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
           <Routes>
-            <Route path="/" element={<Trading />} />
+            <Route path="/" element={<AdminDashboard />} />
             {hasPermission("Users") && (
               <Route path="/users" element={<AdminUsers />} />
             )}
@@ -95,7 +96,7 @@ const Layout = () => {
               <Route path="/withdraws" element={<Withdraws />} />
             )}
             {hasPermission("Dashboard") && (
-              <Route path="/trading" element={<Trading />} />
+              <Route path="/dashboard" element={<AdminDashboard />} />
             )}
             {hasPermission("Edit Feature") && (
               <Route path="/settings" element={<Settings />} />
@@ -111,9 +112,6 @@ const Layout = () => {
             )}
             {hasPermission("Mining") && (
               <Route path="/mining" element={<MiningDashboard />} />
-            )}
-            {hasPermission("Loans") && (
-              <Route path="/loans" element={<Loans />} />
             )}
 
             <Route path="/chat-faq" element={<ChatFAQs />} />

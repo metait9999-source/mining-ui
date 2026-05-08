@@ -1,5 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
-import Header from "../Header/Header";
+import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { API_BASE_URL } from "../../api/getApiURL";
 import {
@@ -16,105 +15,7 @@ import useConversation from "../../zustand/useConversion";
 import useListenMessages from "../../hooks/useListenMessages";
 import useTyping from "../utils/useTyping";
 import { RiAdminFill } from "react-icons/ri";
-
-const styles = `
-  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
-
-  .chat-root {
-    --bg-base: #000000;
-    --bg-surface: #0d0d0d;
-    --bg-elevated: #141414;
-    --bg-hover: #1a1a1a;
-    --bg-active: #202020;
-    --border-subtle: rgba(255,255,255,0.06);
-    --border-default: rgba(255,255,255,0.10);
-    --border-strong: rgba(255,255,255,0.18);
-    --text-primary: #ffffff;
-    --text-secondary: rgba(255,255,255,0.65);
-    --text-muted: rgba(255,255,255,0.35);
-    --accent: #7c3aed;
-    --accent-light: #a78bfa;
-    --accent-subtle: rgba(124,58,237,0.15);
-    --accent-border: rgba(124,58,237,0.35);
-    --glow: rgba(124,58,237,0.2);
-    --bubble-out-start: #6d28d9;
-    --bubble-out-end: #7c3aed;
-    --bubble-in: #141414;
-    --pink: #f43f5e;
-    --pink-light: #fb7185;
-    --green: #22c55e;
-  }
-
-  @keyframes typingBounce {
-    0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
-    30% { transform: translateY(-5px); opacity: 1; }
-  }
-
-  @keyframes msgSlideIn {
-    from { opacity: 0; transform: translateY(6px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  @keyframes pulseOnline {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0.4); }
-    50% { box-shadow: 0 0 0 4px rgba(34,197,94,0); }
-  }
-
-  @keyframes shimmer {
-    0% { background-position: -200% center; }
-    100% { background-position: 200% center; }
-  }
-
-  .chat-msg-new {
-    animation: msgSlideIn 0.2s ease-out;
-  }
-
-  .chat-faq-chip:hover {
-    background: rgba(124,58,237,0.2) !important;
-    border-color: rgba(124,58,237,0.55) !important;
-    transform: translateY(-1px);
-  }
-
-  .chat-faq-chip:active {
-    transform: translateY(0);
-  }
-
-  .chat-input-field:focus-within {
-    border-color: rgba(124,58,237,0.45) !important;
-    box-shadow: 0 0 0 3px rgba(124,58,237,0.08) !important;
-  }
-
-  .chat-send-btn:not(:disabled):hover {
-    transform: scale(1.06);
-    box-shadow: 0 6px 20px rgba(124,58,237,0.45) !important;
-  }
-
-  .chat-send-btn:not(:disabled):active {
-    transform: scale(0.95);
-  }
-
-  .chat-scroll-btn:hover {
-    background: #1a1a1a !important;
-    transform: translateY(-2px);
-  }
-
-  .chat-attach-btn:hover {
-    background: var(--bg-hover) !important;
-    border-color: var(--border-strong) !important;
-    color: rgba(255,255,255,0.7) !important;
-  }
-
-  .chat-messages-area::-webkit-scrollbar {
-    width: 3px;
-  }
-  .chat-messages-area::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  .chat-messages-area::-webkit-scrollbar-thumb {
-    background: rgba(255,255,255,0.1);
-    border-radius: 3px;
-  }
-`;
+import AppNav from "../Home/Navbar";
 
 const ChatComponent = () => {
   const { user } = useUser();
@@ -145,6 +46,8 @@ const ChatComponent = () => {
 
   const conversationId = selectedConversation?.conversation_id;
   const isTyping = typingUsers?.[String(conversationId)];
+  const isBlocked = messageStatus === 0;
+  const hasMessages = messages && messages.length > 0;
 
   const { emitTyping, emitStopTyping } = useTyping({
     recipientId: 0,
@@ -159,16 +62,14 @@ const ChatComponent = () => {
       .catch((e) => console.error("FAQs:", e));
   }, []);
 
-  const scrollToBottom = (smooth = true) => {
+  const scrollToBottom = (smooth = true) =>
     chatEndRef.current?.scrollIntoView({
       behavior: smooth ? "smooth" : "auto",
     });
-  };
 
   useEffect(() => {
     scrollToBottom();
   }, [messages, isTyping]);
-
   useEffect(() => {
     if (data) setSelectedConversation(data[0]);
   }, [data, setSelectedConversation]);
@@ -181,16 +82,13 @@ const ChatComponent = () => {
 
   useEffect(() => {
     if (!user?.id) return;
-    const fetchStatus = async () => {
+    (async () => {
       try {
         const res = await fetch(`${API_BASE_URL}/users/${user.id}`);
-        const data = await res.json();
-        setMessageStatus(data.message_status);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    fetchStatus();
+        const d = await res.json();
+        setMessageStatus(d.message_status);
+      } catch {}
+    })();
   }, [user, refreshStatus]);
 
   const handleFileChange = (e) => {
@@ -199,7 +97,6 @@ const ChatComponent = () => {
     setFile(f);
     setFilePreview(URL.createObjectURL(f));
   };
-
   const removeFile = () => {
     setFile(null);
     setFilePreview("");
@@ -218,7 +115,6 @@ const ChatComponent = () => {
       fd.append("messageText", message);
       fd.append("senderType", "user");
       if (file) fd.append("documents", file);
-
       const res = await axios.post(`${API_BASE_URL}/messages/send`, fd);
       if (res.data && !selectedConversation) setSelectedConversation(res.data);
       setMessages((prev) => [...prev, res.data]);
@@ -227,7 +123,7 @@ const ChatComponent = () => {
       setFilePreview("");
       setRefreshStatus((p) => !p);
     } catch (err) {
-      console.error("Failed to send message:", err);
+      console.error("Send error:", err);
     } finally {
       setSending(false);
     }
@@ -250,16 +146,13 @@ const ChatComponent = () => {
       fd.append("messageText", faq.question);
       fd.append("senderType", "user");
       fd.append("faq_id", faq.id);
-
       const res = await axios.post(`${API_BASE_URL}/messages/send`, fd);
       if (res.data && !selectedConversation) setSelectedConversation(res.data);
-
       const childRes = await axios.get(
         `${API_BASE_URL}/chat-faqs/${faq.id}/children`,
       );
       const { parent, children } = childRes.data;
       const safeChildren = Array.isArray(children) ? children : [];
-
       const botReply = {
         id: `bot-${Date.now()}`,
         sender_id: null,
@@ -269,11 +162,10 @@ const ChatComponent = () => {
         created_at: new Date().toISOString(),
         conversation_id: res.data?.conversation_id,
       };
-
       setMessages((prev) => [...prev, res.data, botReply]);
       setRefreshStatus((p) => !p);
     } catch (err) {
-      console.error("FAQ select error:", err);
+      console.error("FAQ error:", err);
     } finally {
       setSending(false);
     }
@@ -289,750 +181,625 @@ const ChatComponent = () => {
       : format(date, "hh:mm a");
   };
 
-  const isBlocked = messageStatus === 0;
-  const hasMessages = messages && messages.length > 0;
+  const initials = (user?.name || "U").charAt(0).toUpperCase();
 
   return (
     <div
-      className="chat-root"
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-        height: "100dvh",
-        background: "var(--bg-base)",
-        fontFamily: "'DM Sans', sans-serif",
-      }}
+      className="flex flex-col"
+      style={{ height: "100dvh", background: "#080810", color: "#e2e8f0" }}
     >
-      <style>{styles}</style>
-      <Header pageTitle="Support Chat" />
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@700;900&display=swap');
+        .orb{font-family:'Orbitron',sans-serif!important}
+        .raj{font-family:'Rajdhani',sans-serif!important}
+        @keyframes typingBounce{0%,60%,100%{transform:translateY(0);opacity:.5}30%{transform:translateY(-5px);opacity:1}}
+        @keyframes msgIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+        .msg-new{animation:msgIn .2s ease-out}
+        .faq-chip{transition:all .15s}
+        .faq-chip:hover{background:rgba(245,158,11,0.12)!important;border-color:rgba(245,158,11,0.35)!important;transform:translateY(-1px)}
+        .send-btn:not(:disabled):hover{transform:scale(1.06);box-shadow:0 6px 20px rgba(245,158,11,0.45)!important}
+        .send-btn:not(:disabled):active{transform:scale(.94)}
+        .attach-btn:hover{background:rgba(255,255,255,0.08)!important;border-color:rgba(255,255,255,0.15)!important}
+        .chat-scroll::-webkit-scrollbar{width:3px}
+        .chat-scroll::-webkit-scrollbar-track{background:transparent}
+        .chat-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.07);border-radius:3px}
+        .input-area:focus-within{border-color:rgba(245,158,11,0.4)!important;box-shadow:0 0 0 3px rgba(245,158,11,0.07)!important}
+        textarea::placeholder{color:#334155}
+        textarea{caret-color:#f59e0b}
+      `}</style>
 
-      {/* Messages */}
-      <div
-        ref={chatContainerRef}
-        onScroll={handleScroll}
-        className="chat-messages-area"
-        style={{
-          flex: 1,
-          overflowY: "auto",
-          padding: "16px",
-          overscrollBehavior: "contain",
-          background: "var(--bg-base)",
-        }}
-      >
-        {hasMessages ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-            {messages.map((msg, index) => {
-              const isMe = msg.sender_id === user?.id;
-              const prevMsg = messages[index - 1];
-              const showTime =
-                !prevMsg ||
-                differenceInHours(
-                  new Date(msg.created_at),
-                  new Date(prevMsg.created_at),
-                ) >= 1;
-
-              let faqOptions = null;
-              if (msg.faq_options) {
-                try {
-                  const parsed =
-                    typeof msg.faq_options === "string"
-                      ? JSON.parse(msg.faq_options)
-                      : msg.faq_options;
-                  if (Array.isArray(parsed)) faqOptions = parsed;
-                } catch {
-                  faqOptions = null;
-                }
-              }
-
-              return (
-                <div key={msg.id || index} className="chat-msg-new">
-                  {showTime && (
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        margin: "16px 0",
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontSize: "10px",
-                          color: "var(--text-muted)",
-                          background: "var(--bg-elevated)",
-                          border: "1px solid var(--border-subtle)",
-                          padding: "3px 12px",
-                          borderRadius: "20px",
-                          letterSpacing: "0.03em",
-                        }}
-                      >
-                        {formatTime(msg.created_at)}
-                      </span>
-                    </div>
-                  )}
-
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "flex-end",
-                      gap: "8px",
-                      marginBottom: "2px",
-                      justifyContent: isMe ? "flex-end" : "flex-start",
-                    }}
-                  >
-                    {!isMe && (
-                      <div
-                        style={{
-                          width: "30px",
-                          height: "30px",
-                          borderRadius: "50%",
-                          background: "linear-gradient(135deg,#4f46e5,#7c3aed)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          flexShrink: 0,
-                          marginBottom: "2px",
-                          border: "1px solid rgba(124,58,237,0.3)",
-                        }}
-                      >
-                        <RiAdminFill size={20} color="white" />
-                      </div>
-                    )}
-
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "3px",
-                        maxWidth: "75%",
-                        alignItems: isMe ? "flex-end" : "flex-start",
-                      }}
-                    >
-                      {msg.message_text && (
-                        <div
-                          style={{
-                            padding: "10px 14px",
-                            borderRadius: "18px",
-                            fontSize: "13.5px",
-                            lineHeight: "1.55",
-                            wordBreak: "break-word",
-                            background: isMe
-                              ? "linear-gradient(135deg, #5b21b6, #7c3aed)"
-                              : "var(--bg-elevated)",
-                            color: "var(--text-primary)",
-                            borderBottomRightRadius: isMe ? "4px" : "18px",
-                            borderBottomLeftRadius: isMe ? "18px" : "4px",
-                            border: isMe
-                              ? "none"
-                              : "1px solid var(--border-default)",
-                            boxShadow: isMe
-                              ? "0 4px 16px rgba(124,58,237,0.25)"
-                              : "0 1px 4px rgba(0,0,0,0.4)",
-                          }}
-                        >
-                          {msg.message_text}
-                        </div>
-                      )}
-
-                      {msg.message_image && (
-                        <img
-                          src={`${API_BASE_URL}/${msg.message_image}`}
-                          alt="attachment"
-                          onClick={() =>
-                            setSelectedImage(
-                              `${API_BASE_URL}/${msg.message_image}`,
-                            )
-                          }
-                          style={{
-                            maxWidth: "220px",
-                            borderRadius: "14px",
-                            cursor: "pointer",
-                            border: "1px solid var(--border-default)",
-                            transition: "opacity 0.15s",
-                          }}
-                        />
-                      )}
-
-                      {faqOptions && faqOptions.length > 0 && (
-                        <div
-                          style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: "6px",
-                            marginTop: "4px",
-                            width: "100%",
-                          }}
-                        >
-                          {faqOptions.map((faq) => (
-                            <button
-                              key={faq.id}
-                              onClick={() => handleFaqSelect(faq)}
-                              disabled={sending}
-                              className="chat-faq-chip"
-                              style={{
-                                textAlign: "left",
-                                padding: "9px 14px",
-                                borderRadius: "12px",
-                                fontSize: "12.5px",
-                                fontWeight: 600,
-                                cursor: sending ? "not-allowed" : "pointer",
-                                background: "rgba(124,58,237,0.1)",
-                                border: "1px solid rgba(124,58,237,0.3)",
-                                color: "#c4b5fd",
-                                fontFamily: "inherit",
-                                transition: "all 0.15s ease",
-                                opacity: sending ? 0.5 : 1,
-                              }}
-                            >
-                              💬 {faq.question}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "4px",
-                          padding: "0 2px",
-                          justifyContent: isMe ? "flex-end" : "flex-start",
-                        }}
-                      >
-                        {isMe && (
-                          <span
-                            style={{
-                              fontSize: "10px",
-                              fontWeight: 600,
-                              color: msg.seen
-                                ? "#a78bfa"
-                                : "rgba(255,255,255,0.25)",
-                              transition: "color 0.3s",
-                              letterSpacing: "0.01em",
-                            }}
-                          >
-                            {msg.seen
-                              ? `✓✓ Read${msg.seen_at ? ` ${format(new Date(msg.seen_at), "hh:mm a")}` : ""}`
-                              : "✓ Sent"}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {isMe && (
-                      <div
-                        style={{
-                          width: "30px",
-                          height: "30px",
-                          borderRadius: "50%",
-                          background:
-                            "linear-gradient(135deg, #be185d, #f43f5e)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: "12px",
-                          fontWeight: 700,
-                          color: "white",
-                          flexShrink: 0,
-                          marginBottom: "2px",
-                        }}
-                      >
-                        {(user?.name || "U").charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-
-            {/* Typing indicator */}
-            {isTyping && (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "flex-end",
-                  gap: "8px",
-                  marginBottom: "4px",
-                  justifyContent: "flex-start",
-                }}
-              >
-                <div
-                  style={{
-                    width: "30px",
-                    height: "30px",
-                    borderRadius: "50%",
-                    background: "linear-gradient(135deg,#4f46e5,#7c3aed)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    border: "1px solid rgba(124,58,237,0.3)",
-                  }}
-                >
-                  <RiAdminFill size={20} color="white" />
-                </div>
-                <div
-                  style={{
-                    padding: "12px 16px",
-                    borderRadius: "18px",
-                    borderBottomLeftRadius: "4px",
-                    background: "var(--bg-elevated)",
-                    border: "1px solid var(--border-default)",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "5px",
-                  }}
-                >
-                  {[0, 0.2, 0.4].map((delay, i) => (
-                    <span
-                      key={i}
-                      style={{
-                        width: "7px",
-                        height: "7px",
-                        borderRadius: "50%",
-                        background: "rgba(255,255,255,0.4)",
-                        display: "inline-block",
-                        animation: `typingBounce 1.2s infinite ease-in-out ${delay}s`,
-                      }}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        ) : (
-          /* Empty state */
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              minHeight: "100%",
-              padding: "32px 16px",
-              textAlign: "center",
-            }}
-          >
-            <div
-              style={{
-                width: "72px",
-                height: "72px",
-                borderRadius: "22px",
-                background: "linear-gradient(135deg,#4f46e5,#7c3aed)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                marginBottom: "20px",
-                boxShadow: "0 8px 32px rgba(124,58,237,0.35)",
-                border: "1px solid rgba(124,58,237,0.4)",
-              }}
-            >
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"
-                  stroke="white"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </div>
-            <p
-              style={{
-                fontWeight: 800,
-                color: "var(--text-primary)",
-                fontSize: "20px",
-                margin: "0 0 6px",
-              }}
-            >
-              Hi {user?.name || "there"} 👋
-            </p>
-            <p
-              style={{
-                color: "var(--text-secondary)",
-                fontSize: "13.5px",
-                lineHeight: 1.6,
-                margin: "0 0 24px",
-                maxWidth: "280px",
-              }}
-            >
-              How can we help you today? Choose a topic or send us a message.
-            </p>
-
-            {rootFaqs.length > 0 && (
-              <div style={{ width: "100%", maxWidth: "360px" }}>
-                <p
-                  style={{
-                    fontSize: "10px",
-                    color: "var(--text-muted)",
-                    fontWeight: 700,
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                    marginBottom: "10px",
-                    textAlign: "left",
-                  }}
-                >
-                  Quick Help
-                </p>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "8px",
-                  }}
-                >
-                  {rootFaqs.map((faq) => (
-                    <button
-                      key={faq.id}
-                      onClick={() => handleFaqSelect(faq)}
-                      disabled={sending}
-                      className="chat-faq-chip"
-                      style={{
-                        textAlign: "left",
-                        padding: "12px 16px",
-                        borderRadius: "14px",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "12px",
-                        background: "var(--bg-elevated)",
-                        border: "1px solid var(--border-default)",
-                        color: "var(--text-primary)",
-                        fontSize: "13px",
-                        fontWeight: 600,
-                        fontFamily: "inherit",
-                        cursor: sending ? "not-allowed" : "pointer",
-                        transition: "all 0.15s ease",
-                        opacity: sending ? 0.5 : 1,
-                      }}
-                    >
-                      <span
-                        style={{
-                          width: "30px",
-                          height: "30px",
-                          borderRadius: "10px",
-                          background: "rgba(124,58,237,0.15)",
-                          border: "1px solid rgba(124,58,237,0.25)",
-                          color: "#a78bfa",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          flexShrink: 0,
-                          fontSize: "14px",
-                        }}
-                      >
-                        💬
-                      </span>
-                      {faq.question}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-        <div ref={chatEndRef} />
+      <div className="flex-shrink-0">
+        <AppNav />
       </div>
 
-      {/* Scroll to bottom button */}
-      {showScrollBtn && (
-        <button
-          onClick={() => scrollToBottom()}
-          className="chat-scroll-btn"
-          style={{
-            position: "fixed",
-            bottom: "88px",
-            right: "16px",
-            zIndex: 10,
-            width: "36px",
-            height: "36px",
-            borderRadius: "50%",
-            background: "var(--bg-elevated)",
-            border: "1px solid var(--border-strong)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "var(--text-secondary)",
-            cursor: "pointer",
-            transition: "all 0.15s",
-            boxShadow: "0 4px 16px rgba(0,0,0,0.5)",
-          }}
-        >
-          <IoChevronDown size={17} />
-        </button>
-      )}
-
-      {/* Input area */}
-      {isBlocked ? (
-        <div
-          style={{
-            flexShrink: 0,
-            padding: "14px 16px",
-            background: "rgba(239,68,68,0.08)",
-            borderTop: "1px solid rgba(239,68,68,0.2)",
-            textAlign: "center",
-          }}
-        >
-          <p
+      <div
+        className="flex-1 flex overflow-hidden px-4 md:px-8 lg:px-16 pb-4"
+        style={{ maxWidth: "100%", margin: "0 auto", width: "100%" }}
+      >
+        <div className="flex-1 flex flex-col max-w-3xl mx-auto w-full lg:max-w-none">
+          {/* Chat header bar */}
+          <div
+            className="flex items-center gap-3 px-4 py-3 rounded-t-2xl mt-4 flex-shrink-0"
             style={{
-              color: "#fca5a5",
-              fontSize: "13px",
-              fontWeight: 600,
-              margin: 0,
+              background: "#0a0a14",
+              border: "1px solid rgba(255,255,255,0.07)",
+              borderBottom: "none",
             }}
           >
-            🚫 Your account has been blocked from sending messages
-          </p>
-        </div>
-      ) : (
-        <div
-          style={{
-            flexShrink: 0,
-            background: "var(--bg-surface)",
-            borderTop: "1px solid var(--border-subtle)",
-            padding: "12px 14px",
-            boxShadow: "0 -8px 24px rgba(0,0,0,0.4)",
-          }}
-        >
-          {filePreview && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "12px",
-                marginBottom: "10px",
-                padding: "10px",
-                background: "var(--bg-elevated)",
-                borderRadius: "14px",
-                border: "1px solid var(--border-default)",
-              }}
-            >
+            <div className="relative flex-shrink-0">
               <div
+                className="w-10 h-10 rounded-full flex items-center justify-center"
                 style={{
-                  width: "44px",
-                  height: "44px",
-                  borderRadius: "10px",
-                  overflow: "hidden",
-                  flexShrink: 0,
+                  background: "linear-gradient(135deg,#f59e0b,#f97316)",
                 }}
               >
-                <img
-                  src={filePreview}
-                  alt="preview"
-                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p
-                  style={{
-                    fontSize: "12px",
-                    color: "var(--text-secondary)",
-                    fontWeight: 500,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                    margin: 0,
-                  }}
-                >
-                  {file?.name}
-                </p>
-                <p
-                  style={{
-                    fontSize: "10px",
-                    color: "var(--text-muted)",
-                    margin: 0,
-                  }}
-                >
-                  Ready to send
-                </p>
-              </div>
-              <button
-                onClick={removeFile}
-                style={{
-                  width: "28px",
-                  height: "28px",
-                  borderRadius: "50%",
-                  background: "var(--bg-hover)",
-                  border: "1px solid var(--border-default)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  cursor: "pointer",
-                  color: "var(--text-secondary)",
-                  flexShrink: 0,
-                }}
-              >
-                <IoClose size={13} />
-              </button>
-            </div>
-          )}
-
-          <div style={{ display: "flex", alignItems: "flex-end", gap: "8px" }}>
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="chat-attach-btn"
-              style={{
-                flexShrink: 0,
-                width: "40px",
-                height: "40px",
-                borderRadius: "12px",
-                background: "var(--bg-elevated)",
-                border: "1px solid var(--border-default)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "var(--text-muted)",
-                cursor: "pointer",
-                transition: "all 0.15s",
-              }}
-            >
-              <IoImageOutline size={18} />
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              style={{ display: "none" }}
-            />
-
-            <div
-              className="chat-input-field"
-              style={{
-                flex: 1,
-                background: "var(--bg-elevated)",
-                border: "1px solid var(--border-default)",
-                borderRadius: "14px",
-                padding: "9px 14px",
-                transition: "all 0.2s",
-              }}
-            >
-              <textarea
-                value={message}
-                onChange={(e) => {
-                  setMessage(e.target.value);
-                  emitTyping();
-                }}
-                onBlur={emitStopTyping}
-                onKeyDown={handleKeyDown}
-                placeholder="Type a message..."
-                rows={1}
-                style={{
-                  width: "100%",
-                  background: "transparent",
-                  border: "none",
-                  outline: "none",
-                  color: "var(--text-primary)",
-                  fontSize: "13.5px",
-                  resize: "none",
-                  lineHeight: "1.5",
-                  fontFamily: "inherit",
-                  maxHeight: "110px",
-                  caretColor: "#a78bfa",
-                }}
-              />
-            </div>
-
-            <button
-              onClick={sendMessage}
-              disabled={sending || (!message.trim() && !file)}
-              className="chat-send-btn"
-              style={{
-                flexShrink: 0,
-                width: "40px",
-                height: "40px",
-                borderRadius: "12px",
-                background: "linear-gradient(135deg,#5b21b6,#7c3aed)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "white",
-                border: "none",
-                cursor:
-                  sending || (!message.trim() && !file)
-                    ? "not-allowed"
-                    : "pointer",
-                transition: "all 0.15s",
-                opacity: sending || (!message.trim() && !file) ? 0.4 : 1,
-                boxShadow: "0 4px 14px rgba(124,58,237,0.35)",
-              }}
-            >
-              {sending ? (
-                <svg
-                  className="animate-spin"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                >
-                  <circle
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="rgba(255,255,255,0.3)"
-                    strokeWidth="3"
-                  />
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                   <path
-                    d="M12 2a10 10 0 0110 10"
+                    d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"
+                    fill="rgba(8,8,16,0.3)"
                     stroke="white"
-                    strokeWidth="3"
+                    strokeWidth="2"
                     strokeLinecap="round"
+                    strokeLinejoin="round"
                   />
                 </svg>
-              ) : (
-                <IoSend size={15} />
-              )}
-            </button>
+              </div>
+              <span
+                className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2"
+                style={{ background: "#10b981", borderColor: "#0a0a14" }}
+              />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p
+                className="orb font-black text-sm"
+                style={{ color: "#f1f5f9" }}
+              >
+                Support Chat
+              </p>
+              <p
+                className="raj font-medium text-xs"
+                style={{ color: "#10b981" }}
+              >
+                Online · Typically replies in minutes
+              </p>
+            </div>
+            <div
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full"
+              style={{
+                background: "rgba(16,185,129,0.08)",
+                border: "1px solid rgba(16,185,129,0.15)",
+              }}
+            >
+              <div className="relative w-1.5 h-1.5 flex-shrink-0">
+                <div
+                  className="absolute inset-0 rounded-full"
+                  style={{
+                    background: "#10b981",
+                    animation: "pulse-ring 2s ease-out infinite",
+                  }}
+                />
+                <div
+                  className="w-1.5 h-1.5 rounded-full"
+                  style={{ background: "#10b981" }}
+                />
+              </div>
+              <span
+                className="raj font-bold text-xs"
+                style={{ color: "#10b981" }}
+              >
+                LIVE
+              </span>
+            </div>
           </div>
+
+          {/* Messages area */}
+          <div
+            ref={chatContainerRef}
+            onScroll={handleScroll}
+            className="chat-scroll flex-1 overflow-y-auto relative"
+            style={{
+              background: "#080810",
+              border: "1px solid rgba(255,255,255,0.06)",
+              borderTop: "none",
+              borderBottom: "none",
+            }}
+          >
+            <div className="p-4 flex flex-col gap-0.5 min-h-full">
+              {hasMessages ? (
+                <>
+                  {messages.map((msg, index) => {
+                    const isMe = msg.sender_id === user?.id;
+                    const prevMsg = messages[index - 1];
+                    const showTime =
+                      !prevMsg ||
+                      differenceInHours(
+                        new Date(msg.created_at),
+                        new Date(prevMsg.created_at),
+                      ) >= 1;
+
+                    let faqOptions = null;
+                    if (msg.faq_options) {
+                      try {
+                        const p =
+                          typeof msg.faq_options === "string"
+                            ? JSON.parse(msg.faq_options)
+                            : msg.faq_options;
+                        if (Array.isArray(p)) faqOptions = p;
+                      } catch {}
+                    }
+
+                    return (
+                      <div key={msg.id || index} className="msg-new">
+                        {showTime && (
+                          <div className="flex justify-center my-4">
+                            <span
+                              className="raj font-semibold text-xs px-4 py-1 rounded-full"
+                              style={{
+                                background: "rgba(255,255,255,0.04)",
+                                border: "1px solid rgba(255,255,255,0.07)",
+                                color: "#334155",
+                              }}
+                            >
+                              {formatTime(msg.created_at)}
+                            </span>
+                          </div>
+                        )}
+
+                        <div
+                          className={`flex items-end gap-2 mb-1 ${isMe ? "justify-end" : "justify-start"}`}
+                        >
+                          {/* Admin avatar */}
+                          {!isMe && (
+                            <div
+                              className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mb-0.5"
+                              style={{
+                                background:
+                                  "linear-gradient(135deg,#0f1020,#1e293b)",
+                                border: "1px solid rgba(245,158,11,0.2)",
+                              }}
+                            >
+                              <RiAdminFill size={16} color="#f59e0b" />
+                            </div>
+                          )}
+
+                          <div
+                            className={`flex flex-col gap-1 max-w-[75%] ${isMe ? "items-end" : "items-start"}`}
+                          >
+                            {msg.message_text && (
+                              <div
+                                className="px-4 py-2.5"
+                                style={{
+                                  borderRadius: 18,
+                                  borderBottomRightRadius: isMe ? 4 : 18,
+                                  borderBottomLeftRadius: isMe ? 18 : 4,
+                                  background: isMe
+                                    ? "linear-gradient(135deg,#92400e,#f59e0b)"
+                                    : "#0f0f1f",
+                                  color: "#f1f5f9",
+                                  fontSize: 14,
+                                  lineHeight: 1.55,
+                                  wordBreak: "break-word",
+                                  border: isMe
+                                    ? "none"
+                                    : "1px solid rgba(255,255,255,0.08)",
+                                  boxShadow: isMe
+                                    ? "0 4px 14px rgba(245,158,11,0.2)"
+                                    : "0 1px 4px rgba(0,0,0,0.4)",
+                                }}
+                              >
+                                {msg.message_text}
+                              </div>
+                            )}
+
+                            {msg.message_image && (
+                              <img
+                                src={`${API_BASE_URL}/${msg.message_image}`}
+                                alt="attachment"
+                                onClick={() =>
+                                  setSelectedImage(
+                                    `${API_BASE_URL}/${msg.message_image}`,
+                                  )
+                                }
+                                className="rounded-2xl cursor-pointer transition-opacity hover:opacity-85"
+                                style={{
+                                  maxWidth: 220,
+                                  border: "1px solid rgba(255,255,255,0.1)",
+                                }}
+                              />
+                            )}
+
+                            {faqOptions && faqOptions.length > 0 && (
+                              <div className="flex flex-col gap-1.5 mt-1 w-full">
+                                {faqOptions.map((faq) => (
+                                  <button
+                                    key={faq.id}
+                                    onClick={() => handleFaqSelect(faq)}
+                                    disabled={sending}
+                                    className="faq-chip text-left px-4 py-2.5 rounded-2xl raj font-semibold text-sm border-none cursor-pointer"
+                                    style={{
+                                      background: "rgba(245,158,11,0.07)",
+                                      border: "1px solid rgba(245,158,11,0.2)",
+                                      color: "#f59e0b",
+                                      opacity: sending ? 0.5 : 1,
+                                    }}
+                                  >
+                                    💬 {faq.question}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Read receipt */}
+                            {isMe && (
+                              <span
+                                className="raj font-semibold text-xs px-1"
+                                style={{
+                                  color: msg.seen
+                                    ? "#f59e0b"
+                                    : "rgba(255,255,255,0.2)",
+                                }}
+                              >
+                                {msg.seen
+                                  ? `✓✓ Read${msg.seen_at ? ` ${format(new Date(msg.seen_at), "hh:mm a")}` : ""}`
+                                  : "✓ Sent"}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* User avatar */}
+                          {isMe && (
+                            <div
+                              className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mb-0.5 orb font-black text-sm"
+                              style={{
+                                background:
+                                  "linear-gradient(135deg,#f59e0b,#f97316)",
+                                color: "#080810",
+                              }}
+                            >
+                              {initials}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Typing indicator */}
+                  {isTyping && (
+                    <div className="flex items-end gap-2 mb-1">
+                      <div
+                        className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                        style={{
+                          background: "linear-gradient(135deg,#0f1020,#1e293b)",
+                          border: "1px solid rgba(245,158,11,0.2)",
+                        }}
+                      >
+                        <RiAdminFill size={16} color="#f59e0b" />
+                      </div>
+                      <div
+                        className="px-4 py-3 rounded-2xl flex gap-1.5"
+                        style={{
+                          background: "#0f0f1f",
+                          border: "1px solid rgba(255,255,255,0.08)",
+                          borderBottomLeftRadius: 4,
+                        }}
+                      >
+                        {[0, 0.2, 0.4].map((d, i) => (
+                          <span
+                            key={i}
+                            className="w-2 h-2 rounded-full inline-block"
+                            style={{
+                              background: "rgba(255,255,255,0.35)",
+                              animation: `typingBounce 1.2s infinite ease-in-out ${d}s`,
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                /* Empty state */
+                <div
+                  className="flex flex-col items-center justify-center flex-1 py-12 px-4 text-center"
+                  style={{ minHeight: "60vh" }}
+                >
+                  <div
+                    className="w-16 h-16 rounded-3xl flex items-center justify-center mb-5"
+                    style={{
+                      background: "linear-gradient(135deg,#f59e0b,#f97316)",
+                      boxShadow: "0 8px 28px rgba(245,158,11,0.35)",
+                    }}
+                  >
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                      <path
+                        d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"
+                        fill="rgba(8,8,16,0.3)"
+                        stroke="white"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
+                  <p
+                    className="orb font-black text-xl mb-2"
+                    style={{ color: "#f1f5f9" }}
+                  >
+                    Hi {user?.name || "there"} 👋
+                  </p>
+                  <p
+                    className="raj font-medium text-sm max-w-xs mx-auto mb-8 leading-relaxed"
+                    style={{ color: "#64748b" }}
+                  >
+                    How can we help you today? Choose a topic or send us a
+                    message.
+                  </p>
+
+                  {rootFaqs.length > 0 && (
+                    <div className="w-full max-w-sm">
+                      <p
+                        className="raj font-bold text-xs tracking-widest uppercase mb-3 text-left"
+                        style={{ color: "#334155" }}
+                      >
+                        Quick Help
+                      </p>
+                      <div className="flex flex-col gap-2">
+                        {rootFaqs.map((faq) => (
+                          <button
+                            key={faq.id}
+                            onClick={() => handleFaqSelect(faq)}
+                            disabled={sending}
+                            className="faq-chip flex items-center gap-3 px-4 py-3 rounded-2xl text-left border-none cursor-pointer"
+                            style={{
+                              background: "rgba(255,255,255,0.03)",
+                              border: "1px solid rgba(255,255,255,0.07)",
+                              color: "#f1f5f9",
+                              opacity: sending ? 0.5 : 1,
+                            }}
+                          >
+                            <span
+                              className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 text-sm"
+                              style={{
+                                background: "rgba(245,158,11,0.1)",
+                                border: "1px solid rgba(245,158,11,0.2)",
+                              }}
+                            >
+                              💬
+                            </span>
+                            <span className="raj font-semibold text-sm">
+                              {faq.question}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              <div ref={chatEndRef} />
+            </div>
+
+            {/* Scroll to bottom */}
+            {showScrollBtn && (
+              <button
+                onClick={() => scrollToBottom()}
+                className="absolute bottom-4 right-4 w-9 h-9 rounded-full flex items-center justify-center border-none cursor-pointer transition-all hover:scale-110"
+                style={{
+                  background: "#0f0f1f",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  color: "#f59e0b",
+                  boxShadow: "0 4px 16px rgba(0,0,0,0.5)",
+                }}
+              >
+                <IoChevronDown size={16} />
+              </button>
+            )}
+          </div>
+
+          {/* Input area */}
+          {isBlocked ? (
+            <div
+              className="flex-shrink-0 px-4 py-3 text-center rounded-b-2xl"
+              style={{
+                background: "rgba(239,68,68,0.07)",
+                border: "1px solid rgba(239,68,68,0.18)",
+                borderTop: "none",
+              }}
+            >
+              <p
+                className="raj font-semibold text-sm"
+                style={{ color: "#fca5a5" }}
+              >
+                🚫 Your account has been blocked from sending messages
+              </p>
+            </div>
+          ) : (
+            <div
+              className="flex-shrink-0 p-3 rounded-b-2xl"
+              style={{
+                background: "#0a0a14",
+                border: "1px solid rgba(255,255,255,0.07)",
+                borderTop: "1px solid rgba(245,158,11,0.08)",
+              }}
+            >
+              {/* File preview */}
+              {filePreview && (
+                <div
+                  className="flex items-center gap-3 mb-3 px-3 py-2.5 rounded-2xl"
+                  style={{
+                    background: "rgba(255,255,255,0.03)",
+                    border: "1px solid rgba(255,255,255,0.07)",
+                  }}
+                >
+                  <div className="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0">
+                    <img
+                      src={filePreview}
+                      alt="preview"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p
+                      className="raj font-semibold text-xs truncate"
+                      style={{ color: "#94a3b8" }}
+                    >
+                      {file?.name}
+                    </p>
+                    <p
+                      className="raj text-xs mt-0.5"
+                      style={{ color: "#334155" }}
+                    >
+                      Ready to send
+                    </p>
+                  </div>
+                  <button
+                    onClick={removeFile}
+                    className="w-7 h-7 rounded-full flex items-center justify-center border-none cursor-pointer"
+                    style={{
+                      background: "rgba(255,255,255,0.06)",
+                      color: "#64748b",
+                    }}
+                  >
+                    <IoClose size={13} />
+                  </button>
+                </div>
+              )}
+
+              <div className="flex items-end gap-2">
+                {/* Attach */}
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="attach-btn flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center border-none cursor-pointer transition-all"
+                  style={{
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    color: "#475569",
+                  }}
+                >
+                  <IoImageOutline size={18} />
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+
+                {/* Text input */}
+                <div
+                  className="input-area flex-1 rounded-2xl px-4 py-2.5 transition-all"
+                  style={{
+                    background: "rgba(255,255,255,0.03)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                  }}
+                >
+                  <textarea
+                    value={message}
+                    onChange={(e) => {
+                      setMessage(e.target.value);
+                      emitTyping();
+                    }}
+                    onBlur={emitStopTyping}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Type a message…"
+                    rows={1}
+                    className="w-full bg-transparent border-none outline-none raj font-medium text-sm resize-none"
+                    style={{
+                      color: "#f1f5f9",
+                      lineHeight: 1.5,
+                      maxHeight: 110,
+                      fontFamily: "'Rajdhani',sans-serif",
+                    }}
+                  />
+                </div>
+
+                {/* Send */}
+                <button
+                  onClick={sendMessage}
+                  disabled={sending || (!message.trim() && !file)}
+                  className="send-btn flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center border-none transition-all"
+                  style={{
+                    background:
+                      message.trim() || file
+                        ? "linear-gradient(135deg,#f59e0b,#f97316)"
+                        : "rgba(255,255,255,0.04)",
+                    cursor:
+                      sending || (!message.trim() && !file)
+                        ? "not-allowed"
+                        : "pointer",
+                    opacity: sending || (!message.trim() && !file) ? 0.4 : 1,
+                    boxShadow:
+                      message.trim() || file
+                        ? "0 4px 14px rgba(245,158,11,0.35)"
+                        : "none",
+                    border: "none",
+                    color: message.trim() || file ? "#080810" : "#475569",
+                  }}
+                >
+                  {sending ? (
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      style={{ animation: "spin .8s linear infinite" }}
+                    >
+                      <circle
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="rgba(255,255,255,0.3)"
+                        strokeWidth="3"
+                      />
+                      <path
+                        d="M12 2a10 10 0 0110 10"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  ) : (
+                    <IoSend size={15} />
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Full image viewer */}
       {selectedImage && (
         <div
-          onClick={() => setSelectedImage(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 1000,
             background: "rgba(0,0,0,0.92)",
-            backdropFilter: "blur(8px)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "16px",
+            backdropFilter: "blur(10px)",
           }}
+          onClick={() => setSelectedImage(null)}
         >
           <div
+            className="relative max-w-lg w-full"
             onClick={(e) => e.stopPropagation()}
-            style={{ position: "relative", maxWidth: "520px", width: "100%" }}
           >
             <button
               onClick={() => setSelectedImage(null)}
-              style={{
-                position: "absolute",
-                top: "-40px",
-                right: 0,
-                color: "rgba(255,255,255,0.6)",
-                background: "none",
-                border: "none",
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                fontSize: "13px",
-                cursor: "pointer",
-              }}
+              className="absolute -top-10 right-0 flex items-center gap-1.5 raj font-semibold text-sm border-none cursor-pointer bg-transparent"
+              style={{ color: "rgba(255,255,255,0.5)" }}
             >
-              <IoClose size={17} /> Close
+              <IoClose size={16} /> Close
             </button>
             <img
               src={selectedImage}
               alt="Full size"
+              className="w-full rounded-2xl block"
               style={{
-                width: "100%",
                 maxHeight: "80vh",
                 objectFit: "contain",
-                borderRadius: "16px",
-                border: "1px solid var(--border-default)",
+                border: "1px solid rgba(255,255,255,0.1)",
               }}
             />
           </div>

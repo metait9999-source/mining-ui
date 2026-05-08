@@ -2,7 +2,6 @@ import React, { useEffect, useState, useCallback } from "react";
 import toast from "react-hot-toast";
 import { useUser } from "../../context/UserContext";
 import { format } from "date-fns";
-import Header from "../Header/Header";
 import useWallets from "../../hooks/useWallets";
 import {
   getPackages,
@@ -11,41 +10,40 @@ import {
   cancelSubscription,
 } from "../../api/arbitrage.api";
 import { useNavigate } from "react-router";
-import { IoMdArrowRoundBack } from "react-icons/io";
-
-/* ─── Theme ── */
-const DARK_BG = "#0a0a0f";
-const DARK_CARD = "rgba(255,255,255,0.04)";
-const DARK_CARD2 = "#111118";
-const DARK_BORDER = "rgba(255,255,255,0.07)";
-const DARK_BORDER2 = "rgba(255,255,255,0.06)";
-const TEXT_PRIMARY = "#f1f5f9";
-const TEXT_MUTED = "#64748b";
-const TEXT_SUB = "#475569";
-const ACCENT = "#7c3aed";
+import AppNav from "../Home/Navbar";
 
 const SUPPORTED_COINS = ["USDT", "BTC", "ETH"];
 const COIN_COLORS = { USDT: "#26a17b", BTC: "#f7931a", ETH: "#627eea" };
 
-const statusStyle = {
-  active: {
-    background: "rgba(16,185,129,0.12)",
-    color: "rgb(16,185,129)",
-    border: "1px solid rgba(16,185,129,0.2)",
-  },
-  completed: {
-    background: "rgba(100,116,139,0.12)",
-    color: "white",
-    border: "1px solid rgba(100,116,139,0.2)",
-  },
-  cancelled: {
-    background: "rgba(239,68,68,0.12)",
-    color: "rgb(239,68,68)",
-    border: "1px solid rgba(239,68,68,0.2)",
-  },
+const StatusBadge = ({ status }) => {
+  const map = {
+    active: {
+      bg: "rgba(16,185,129,0.12)",
+      color: "#10b981",
+      border: "1px solid rgba(16,185,129,0.25)",
+    },
+    completed: {
+      bg: "rgba(100,116,139,0.12)",
+      color: "#94a3b8",
+      border: "1px solid rgba(100,116,139,0.2)",
+    },
+    cancelled: {
+      bg: "rgba(239,68,68,0.12)",
+      color: "#ef4444",
+      border: "1px solid rgba(239,68,68,0.25)",
+    },
+  };
+  const s = map[status] || map.completed;
+  return (
+    <span
+      className="px-2.5 py-1 rounded-full font-bold text-xs raj capitalize"
+      style={{ background: s.bg, color: s.color, border: s.border }}
+    >
+      {status}
+    </span>
+  );
 };
 
-/* ─── Countdown Timer ── */
 const CountdownTimer = ({ endDate }) => {
   const calc = useCallback(() => {
     const diff = new Date(endDate) - new Date();
@@ -57,58 +55,36 @@ const CountdownTimer = ({ endDate }) => {
       s: Math.floor((diff % 60000) / 1000),
     };
   }, [endDate]);
-
   const [time, setTime] = useState(calc);
-
   useEffect(() => {
-    setTime(calc()); // sync immediately on mount / endDate change
+    setTime(calc());
     const t = setInterval(() => setTime(calc()), 1000);
     return () => clearInterval(t);
   }, [calc]);
-
   if (!time)
     return (
-      <span
-        style={{ fontSize: "2.6vw", color: "rgb(239,68,68)", fontWeight: 600 }}
-      >
+      <span className="text-xs font-semibold" style={{ color: "#ef4444" }}>
         Ending soon
       </span>
     );
-
   return (
     <div
-      className="flex items-center gap-1"
+      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg"
       style={{
-        background: "rgba(251,191,36,0.10)",
-        border: "1px solid rgba(251,191,36,0.2)",
-        borderRadius: 8,
-        padding: "3px 8px",
-        display: "inline-flex",
+        background: "rgba(245,158,11,0.1)",
+        border: "1px solid rgba(245,158,11,0.2)",
       }}
     >
-      <svg
-        width="10"
-        height="10"
-        viewBox="0 0 24 24"
-        fill="none"
-        style={{ flexShrink: 0 }}
-      >
-        <circle cx="12" cy="12" r="10" stroke="#fbbf24" strokeWidth="2" />
+      <svg width="9" height="9" viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="10" stroke="#f59e0b" strokeWidth="2" />
         <path
           d="M12 6v6l4 2"
-          stroke="#fbbf24"
+          stroke="#f59e0b"
           strokeWidth="2"
           strokeLinecap="round"
         />
       </svg>
-      <span
-        style={{
-          fontSize: "2.8vw",
-          color: "#fbbf24",
-          fontWeight: 700,
-          letterSpacing: "0.02em",
-        }}
-      >
+      <span className="raj font-bold text-xs" style={{ color: "#f59e0b" }}>
         {time.d}d {String(time.h).padStart(2, "0")}h{" "}
         {String(time.m).padStart(2, "0")}m {String(time.s).padStart(2, "0")}s
       </span>
@@ -116,196 +92,93 @@ const CountdownTimer = ({ endDate }) => {
   );
 };
 
-/* ─── Icons ── */
-const CoinLogo = ({ symbol, size = 36, selected = false, onClick }) => (
+const CoinIcon = ({ symbol, size = 36, selected = false, onClick }) => (
   <button
     onClick={onClick}
-    style={{
-      width: size,
-      height: size,
-      borderRadius: "50%",
-      padding: 0,
-      border: selected
-        ? `2.5px solid ${ACCENT}`
-        : "2.5px solid rgba(255,255,255,0.1)",
-      boxShadow: selected ? `0 0 0 2px rgba(124,58,237,0.3)` : "none",
-      background: "none",
-      cursor: onClick ? "pointer" : "default",
-      flexShrink: 0,
-      transition: "border 0.2s, box-shadow 0.2s",
-    }}
+    className="flex flex-col items-center gap-1.5 bg-transparent border-none cursor-pointer p-0"
+    style={{ opacity: onClick ? 1 : 0.9 }}
   >
-    <img
-      src={`/assets/images/coins/${symbol.toLowerCase()}-logo.png`}
-      alt={symbol}
+    <div
       style={{
-        width: "100%",
-        height: "100%",
+        width: size,
+        height: size,
         borderRadius: "50%",
-        display: "block",
+        overflow: "hidden",
+        flexShrink: 0,
+        border: selected
+          ? `2.5px solid #f59e0b`
+          : "2.5px solid rgba(255,255,255,0.1)",
+        boxShadow: selected ? "0 0 0 3px rgba(245,158,11,0.2)" : "none",
+        transition: "border .2s, box-shadow .2s",
+        background: `${COIN_COLORS[symbol] || "#333"}25`,
       }}
-      onError={(e) => {
-        e.target.style.display = "none";
-        e.target.parentNode.style.background = COIN_COLORS[symbol] || "#333";
-      }}
-    />
+    >
+      <img
+        src={`/assets/images/coins/${symbol.toLowerCase()}-logo.png`}
+        alt={symbol}
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "contain",
+          display: "block",
+        }}
+        onError={(e) => {
+          e.target.style.display = "none";
+        }}
+      />
+    </div>
+    {onClick && (
+      <span
+        className="raj font-semibold text-xs"
+        style={{ color: selected ? "#f59e0b" : "#64748b" }}
+      >
+        {symbol}
+      </span>
+    )}
   </button>
 );
 
-const ShieldIcon = () => (
-  <svg width="20" height="22" viewBox="0 0 20 22" fill="none">
-    <path
-      d="M10 1L2 4.5v6C2 15.1 5.5 19.6 10 21c4.5-1.4 8-5.9 8-10.5v-6L10 1z"
-      fill="#22c55e"
-      opacity=".15"
-      stroke="#22c55e"
-      strokeWidth="1.5"
+const SH = ({ title, badge }) => (
+  <div className="flex items-center gap-2.5 mb-5">
+    <div
+      className="w-0.5 h-5 rounded-full"
+      style={{ background: "linear-gradient(to bottom,#f59e0b,#f97316)" }}
     />
-    <path
-      d="M7 11l2 2 4-4"
-      stroke="#22c55e"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
-
-const CheckIcon = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 16 16"
-    fill="none"
-    className="flex-shrink-0 mt-0.5"
-  >
-    <circle cx="8" cy="8" r="7" fill="#6366f1" opacity=".2" />
-    <path
-      d="M5 8l2 2 4-4"
-      stroke="#818cf8"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
-
-const ArrowsUpDown = () => (
-  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-    <path
-      d="M5 2L3 4l2 2M3 4h7M9 12l2-2-2-2M11 10H4"
-      stroke="#818cf8"
-      strokeWidth="1.4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
-
-/* ════════════════════════════════════════════════════════════════
-   WALLET BALANCE BAR
-════════════════════════════════════════════════════════════════ */
-const WalletBalanceBar = ({ wallets }) => {
-  const supported =
-    wallets?.filter((w) =>
-      SUPPORTED_COINS.includes(w.coin_symbol?.toUpperCase()),
-    ) || [];
-
-  return (
-    <div className="mx-4 mb-4">
-      <div
-        className="rounded-2xl overflow-hidden"
-        style={{ background: DARK_CARD, border: `1px solid ${DARK_BORDER}` }}
+    <span
+      className="font-black tracking-wider orb"
+      style={{ fontSize: "clamp(13px,3.5vw,16px)", color: "#f1f5f9" }}
+    >
+      {title}
+    </span>
+    {badge && (
+      <span
+        className="px-2.5 py-1 rounded-full raj font-bold text-xs"
+        style={{
+          background: "rgba(16,185,129,0.12)",
+          color: "#10b981",
+          border: "1px solid rgba(16,185,129,0.2)",
+        }}
       >
-        <div
-          className="px-4 py-3"
-          style={{ borderBottom: `1px solid ${DARK_BORDER2}` }}
-        >
-          <p
-            className="font-semibold uppercase tracking-wide"
-            style={{ fontSize: "3vw", color: TEXT_MUTED }}
-          >
-            My Wallets
-          </p>
-        </div>
-        <div>
-          {supported.length === 0 ? (
-            <div
-              className="px-4 py-4 text-center"
-              style={{ color: TEXT_MUTED, fontSize: "3.5vw" }}
-            >
-              No wallets found
-            </div>
-          ) : (
-            supported.map((w) => (
-              <div
-                key={w.id}
-                className="flex items-center justify-between px-4 py-3"
-                style={{ borderBottom: `1px solid ${DARK_BORDER2}` }}
-              >
-                <div className="flex items-center gap-3">
-                  <div
-                    className="w-8 h-8 rounded-full flex items-center justify-center"
-                    style={{
-                      background: `${COIN_COLORS[w.coin_symbol] || "#333"}25`,
-                    }}
-                  >
-                    <img
-                      src={`/assets/images/coins/${w.coin_symbol.toLowerCase()}-logo.png`}
-                      alt={w.coin_symbol}
-                      className="w-6 h-6 rounded-full object-contain"
-                      onError={(e) => {
-                        e.target.style.display = "none";
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <p
-                      className="font-semibold"
-                      style={{ fontSize: "3.8vw", color: TEXT_PRIMARY }}
-                    >
-                      {w.coin_symbol}
-                    </p>
-                    <p style={{ fontSize: "3vw", color: TEXT_MUTED }}>
-                      {w.coin_name}
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p
-                    className="font-bold"
-                    style={{ fontSize: "3.8vw", color: TEXT_PRIMARY }}
-                  >
-                    {parseFloat(w.coin_amount || 0).toFixed(4)}
-                  </p>
-                  <p style={{ fontSize: "3vw", color: TEXT_MUTED }}>
-                    ≈ US$ {parseFloat(w.usd_amount || 0).toFixed(2)}
-                  </p>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
+        {badge}
+      </span>
+    )}
+  </div>
+);
 
-/* ════════════════════════════════════════════════════════════════
-   HOSTING WORK PAGE
-════════════════════════════════════════════════════════════════ */
-const HostingWorkPage = ({
-  onGoToArbitrage,
+/* ════════════════════════════════
+   HOSTING (LISTING) PAGE
+════════════════════════════════ */
+const HostingPage = ({
+  onSubscribe,
   packages,
   subscriptions,
   loadingHistory,
-  onCancelSubscription,
+  onCancel,
   wallets,
 }) => {
   const totalEarned = subscriptions
-    .reduce((sum, s) => sum + parseFloat(s.total_earned || 0), 0)
+    .reduce((s, x) => s + parseFloat(x.total_earned || 0), 0)
     .toFixed(4);
-
   const todayEarned = subscriptions
     .filter(
       (s) =>
@@ -313,431 +186,674 @@ const HostingWorkPage = ({
         new Date(s.last_paid_at).toDateString() === new Date().toDateString(),
     )
     .reduce(
-      (sum, s) => sum + (parseFloat(s.amount) * parseFloat(s.daily_rate)) / 100,
+      (s, x) => s + (parseFloat(x.amount) * parseFloat(x.daily_rate)) / 100,
       0,
     )
     .toFixed(4);
-
   const activeCount = subscriptions.filter((s) => s.status === "active").length;
+  const supportedWallets =
+    wallets?.filter((w) =>
+      SUPPORTED_COINS.includes(w.coin_symbol?.toUpperCase()),
+    ) || [];
 
   return (
-    <div className="min-h-screen pb-8" style={{ background: DARK_BG }}>
-      <Header pageTitle="Arbitrage" />
+    <div
+      className="min-h-screen pb-16"
+      style={{ background: "#080810", color: "#e2e8f0" }}
+    >
+      <AppNav />
 
-      {/* Hero */}
-      <div
-        className="relative overflow-hidden flex flex-col items-center pt-6 pb-12 px-5"
-        style={{
-          background:
-            "linear-gradient(145deg,#7c3aed 0%,#a855f7 45%,#ec4899 100%)",
-          zIndex: 0,
-        }}
-      >
-        <div
-          className="pointer-events-none absolute rounded-full"
-          style={{
-            bottom: 0,
-            left: 0,
-            width: "40vw",
-            height: "40vw",
-            background: "#a5b4fc",
-            filter: "blur(36px)",
-            transform: "translate(-20%,40%)",
-            opacity: 0.15,
-          }}
-        />
-        <div
-          className="pointer-events-none absolute rounded-full"
-          style={{
-            top: 0,
-            right: 0,
-            width: "30vw",
-            height: "30vw",
-            background: "#f9a8d4",
-            filter: "blur(32px)",
-            transform: "translate(20%,-30%)",
-            opacity: 0.15,
-          }}
-        />
-
-        <p
-          className="text-white/70 font-semibold tracking-widest uppercase relative z-10 mb-2"
-          style={{ fontSize: "3vw" }}
-        >
-          Total Earnings
-        </p>
-        <div
-          className="text-white font-black relative z-10 mb-1"
-          style={{ fontSize: "10vw", letterSpacing: "-1px" }}
-        >
-          ${totalEarned}
-        </div>
-        <p className="text-white/60 relative z-10" style={{ fontSize: "3vw" }}>
-          {activeCount} active subscription{activeCount !== 1 ? "s" : ""}
-        </p>
-      </div>
-
-      {/* Stats row */}
-      <div className="mx-4 -mt-5 relative z-10 mb-4">
-        <div className="grid grid-cols-3 gap-3">
-          {[
-            { label: "Today", value: todayEarned, unit: "USDT" },
-            { label: "Active", value: activeCount, unit: "plans" },
-            { label: "Total", value: subscriptions.length, unit: "all time" },
-          ].map((s) => (
-            <div
-              key={s.label}
-              className="rounded-2xl p-3 text-center"
-              style={{
-                background: DARK_CARD2,
-                border: `1px solid ${DARK_BORDER}`,
-              }}
-            >
-              <p
-                style={{ fontSize: "3vw", color: TEXT_MUTED, marginBottom: 4 }}
-              >
-                {s.label}
-              </p>
-              <p
-                className="font-bold"
-                style={{ fontSize: "4.5vw", color: TEXT_PRIMARY }}
-              >
-                {s.value}
-              </p>
-              <p style={{ fontSize: "2.8vw", color: TEXT_MUTED }}>{s.unit}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <WalletBalanceBar wallets={wallets} />
-
-      {/* Packages */}
-      <div className="px-4 mb-4">
-        <p
-          className="font-extrabold mb-3"
-          style={{ fontSize: "4.5vw", color: TEXT_PRIMARY }}
-        >
-          Arbitrage Products
-        </p>
-        {packages.length === 0 ? (
+      <div className="px-4 md:px-8 lg:px-16 max-w-screen-xl mx-auto">
+        <div className="mt-6 fup">
           <div
-            className="rounded-3xl p-8 text-center"
+            className="relative rounded-3xl overflow-hidden"
             style={{
-              background: DARK_CARD,
-              border: `1px solid ${DARK_BORDER}`,
+              background: "linear-gradient(135deg,#0f1020,#0d0d1a 55%,#140f1a)",
+              border: "1px solid rgba(245,158,11,0.14)",
             }}
           >
-            <p style={{ color: TEXT_MUTED, fontSize: "3.5vw" }}>
-              No packages available
-            </p>
-          </div>
-        ) : (
-          packages.map((pkg) => (
             <div
-              key={pkg.id}
-              className="rounded-3xl overflow-hidden mb-4"
+              className="absolute pointer-events-none rounded-full"
               style={{
-                background: DARK_CARD,
-                border: `1px solid ${DARK_BORDER}`,
+                top: -80,
+                right: -80,
+                width: 260,
+                height: 260,
+                background:
+                  "radial-gradient(circle,rgba(245,158,11,.09),transparent 70%)",
               }}
-            >
-              <div
-                className="h-1 w-full"
-                style={{ background: "linear-gradient(90deg,#7c3aed,#ec4899)" }}
-              />
-              <div className="px-5 pt-4 pb-5">
-                <div
-                  className="flex items-start gap-3 mb-4 pb-4"
-                  style={{ borderBottom: `1px solid ${DARK_BORDER2}` }}
-                >
-                  <div
-                    className="px-3 py-1 rounded-xl font-bold flex-shrink-0"
-                    style={{
-                      background: "rgba(124,58,237,0.2)",
-                      color: "#a78bfa",
-                      fontSize: "3.5vw",
-                    }}
-                  >
-                    {pkg.duration_days} Days
-                  </div>
+            />
+            <div
+              className="absolute pointer-events-none rounded-full"
+              style={{
+                bottom: -50,
+                left: -50,
+                width: 180,
+                height: 180,
+                background:
+                  "radial-gradient(circle,rgba(249,115,22,.06),transparent 70%)",
+              }}
+            />
+            <div
+              className="absolute top-0 inset-x-0 h-px"
+              style={{
+                background:
+                  "linear-gradient(90deg,transparent,#f59e0b,#f97316,transparent)",
+              }}
+            />
+
+            <div className="relative z-10 p-6 md:p-8 lg:p-10">
+              <div className="flex flex-col lg:flex-row lg:items-center gap-6 lg:gap-12">
+                <div className="flex-1">
                   <p
-                    style={{
-                      color: TEXT_MUTED,
-                      fontSize: "3.5vw",
-                      lineHeight: 1.5,
-                    }}
+                    className="raj text-xs font-bold tracking-widest uppercase mb-2"
+                    style={{ color: "#475569" }}
                   >
-                    Financial product — redeemable within {pkg.duration_days}{" "}
-                    days
+                    Total Arbitrage Earnings
                   </p>
-                </div>
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <p
+                  <div className="flex items-baseline gap-2.5 mb-3">
+                    <span
+                      className="orb font-black"
                       style={{
-                        color: TEXT_MUTED,
-                        fontSize: "3vw",
-                        marginBottom: 4,
+                        fontSize: "clamp(32px,7vw,54px)",
+                        color: "#f1f5f9",
+                        lineHeight: 1,
                       }}
                     >
-                      Amount range
-                    </p>
-                    <p
-                      className="font-semibold"
-                      style={{ fontSize: "3.5vw", color: TEXT_PRIMARY }}
+                      ${totalEarned}
+                    </span>
+                    <span
+                      className="raj font-bold text-base"
+                      style={{ color: "#475569" }}
                     >
-                      {Number(pkg.min_amount).toLocaleString()} –{" "}
-                      {Number(pkg.max_amount).toLocaleString()}
-                    </p>
+                      USDT
+                    </span>
                   </div>
-                  <div>
-                    <p
-                      style={{
-                        color: TEXT_MUTED,
-                        fontSize: "3vw",
-                        marginBottom: 4,
-                      }}
-                    >
-                      Daily income
-                    </p>
-                    <p
-                      className="font-bold"
-                      style={{ fontSize: "3.5vw", color: ACCENT }}
-                    >
-                      {pkg.daily_rate_min}–{pkg.daily_rate_max}%
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p
-                      style={{
-                        color: TEXT_MUTED,
-                        fontSize: "3vw",
-                        marginBottom: 8,
-                      }}
-                    >
-                      Supported coins
-                    </p>
-                    <div className="flex items-center gap-1.5">
-                      {SUPPORTED_COINS.map((symbol) => (
-                        <CoinLogo key={symbol} symbol={symbol} size={32} />
-                      ))}
+                  <div className="flex items-center gap-2">
+                    <div className="relative w-2 h-2 flex-shrink-0">
+                      <div
+                        className="absolute inset-0 rounded-full"
+                        style={{
+                          background: "#10b981",
+                          animation: "pulse-ring 2s ease-out infinite",
+                        }}
+                      />
+                      <div
+                        className="w-2 h-2 rounded-full"
+                        style={{ background: "#10b981" }}
+                      />
                     </div>
+                    <span
+                      className="raj font-bold text-xs tracking-widest uppercase"
+                      style={{ color: "#10b981" }}
+                    >
+                      AI Trading 24/7
+                    </span>
                   </div>
-                  <button
-                    onClick={() => onGoToArbitrage(pkg)}
-                    className="px-6 py-2.5 rounded-xl text-white font-bold transition-transform active:scale-95"
-                    style={{
-                      fontSize: "3.5vw",
-                      background: "linear-gradient(90deg,#f472b6,#a855f7)",
-                      boxShadow: "0 4px 14px rgba(168,85,247,0.35)",
-                    }}
-                  >
-                    Subscribe
-                  </button>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  {[
+                    { lbl: "Today", val: `$${todayEarned}`, color: "#f59e0b" },
+                    {
+                      lbl: "Active",
+                      val: `${activeCount} plans`,
+                      color: "#10b981",
+                    },
+                    {
+                      lbl: "All Time",
+                      val: `${subscriptions.length} plans`,
+                      color: "#3b82f6",
+                    },
+                  ].map((s) => (
+                    <div
+                      key={s.lbl}
+                      className="rounded-2xl px-4 py-3 text-center"
+                      style={{
+                        background: "rgba(255,255,255,.03)",
+                        border: "1px solid rgba(255,255,255,.07)",
+                        minWidth: 110,
+                      }}
+                    >
+                      <p
+                        className="orb font-black text-sm mb-0.5"
+                        style={{ color: s.color }}
+                      >
+                        {s.val}
+                      </p>
+                      <p
+                        className="raj font-semibold text-xs"
+                        style={{ color: "#334155" }}
+                      >
+                        {s.lbl}
+                      </p>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
-          ))
-        )}
-      </div>
+          </div>
+        </div>
 
-      {/* Subscription history */}
-      <div className="px-4">
-        <p
-          className="font-extrabold mb-3"
-          style={{ fontSize: "4.5vw", color: TEXT_PRIMARY }}
-        >
-          My Subscriptions
-        </p>
-        {loadingHistory ? (
-          <div
-            className="rounded-3xl p-8 text-center"
-            style={{
-              background: DARK_CARD,
-              border: `1px solid ${DARK_BORDER}`,
-            }}
-          >
-            <p style={{ color: TEXT_MUTED, fontSize: "3.5vw" }}>Loading...</p>
-          </div>
-        ) : subscriptions.length === 0 ? (
-          <div
-            className="rounded-3xl p-8 text-center"
-            style={{
-              background: DARK_CARD,
-              border: `1px solid ${DARK_BORDER}`,
-            }}
-          >
-            <p style={{ color: TEXT_MUTED, fontSize: "3.5vw" }}>
-              No subscriptions yet
-            </p>
-            <p style={{ color: TEXT_SUB, fontSize: "3vw", marginTop: 4 }}>
-              Subscribe to a package to start earning
-            </p>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {subscriptions.map((sub) => (
-              <div
-                key={sub.id}
-                className="rounded-2xl overflow-hidden"
-                style={{
-                  background: DARK_CARD,
-                  border: `1px solid ${DARK_BORDER}`,
-                }}
-              >
+        {supportedWallets.length > 0 && (
+          <div className="mt-6 fup2">
+            <SH title="My Wallets" />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {supportedWallets.map((w) => (
                 <div
-                  className="h-0.5 w-full"
+                  key={w.id}
+                  className="rounded-2xl px-4 py-4 flex items-center gap-3"
                   style={{
-                    background: "linear-gradient(90deg,#7c3aed,#ec4899)",
+                    background: "rgba(255,255,255,0.02)",
+                    border: "1px solid rgba(255,255,255,0.06)",
                   }}
-                />
-                <div className="px-4 py-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
+                >
+                  <div
+                    className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+                    style={{
+                      background: `${COIN_COLORS[w.coin_symbol] || "#333"}20`,
+                      border: `1px solid ${COIN_COLORS[w.coin_symbol] || "#333"}35`,
+                    }}
+                  >
+                    <img
+                      src={`/assets/images/coins/${w.coin_symbol.toLowerCase()}-logo.png`}
+                      alt={w.coin_symbol}
+                      className="w-7 h-7 rounded-full object-contain"
+                      onError={(e) => {
+                        e.target.style.display = "none";
+                      }}
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p
+                      className="raj font-bold text-sm"
+                      style={{ color: "#f1f5f9" }}
+                    >
+                      {w.coin_symbol}
+                    </p>
+                    <p className="raj text-xs" style={{ color: "#475569" }}>
+                      {w.coin_name}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p
+                      className="raj font-bold text-sm"
+                      style={{ color: "#f1f5f9" }}
+                    >
+                      {parseFloat(w.coin_amount || 0).toFixed(4)}
+                    </p>
+                    <p className="raj text-xs" style={{ color: "#475569" }}>
+                      ≈ ${parseFloat(w.usd_amount || 0).toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── PACKAGES ── */}
+        <div className="mt-8 fup2">
+          <SH title="Arbitrage Products" />
+          {packages.length === 0 ? (
+            <div
+              className="flex flex-col items-center justify-center py-20 rounded-3xl gap-3"
+              style={{
+                background: "rgba(255,255,255,0.02)",
+                border: "1px solid rgba(255,255,255,0.06)",
+              }}
+            >
+              <p
+                className="raj font-semibold text-sm"
+                style={{ color: "#334155" }}
+              >
+                No packages available
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {packages.map((pkg, idx) => (
+                <div
+                  key={pkg.id}
+                  className="pkg-card rounded-3xl overflow-hidden relative"
+                  style={{
+                    background: "#0a0a14",
+                    border: "1px solid rgba(245,158,11,0.12)",
+                  }}
+                >
+                  <div
+                    className="h-0.5"
+                    style={{
+                      background:
+                        "linear-gradient(90deg,#f59e0b,#f97316,transparent)",
+                    }}
+                  />
+
+                  {idx === 1 && (
+                    <div className="absolute top-4 right-4">
+                      <span
+                        className="raj font-black text-xs px-2.5 py-1 rounded-full"
+                        style={{
+                          background: "rgba(245,158,11,0.15)",
+                          color: "#f59e0b",
+                          border: "1px solid rgba(245,158,11,0.3)",
+                        }}
+                      >
+                        POPULAR
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="p-6">
+                    {/* duration badge */}
+                    <div
+                      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl mb-4"
+                      style={{
+                        background: "rgba(245,158,11,0.1)",
+                        border: "1px solid rgba(245,158,11,0.2)",
+                      }}
+                    >
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                      >
+                        <circle
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="#f59e0b"
+                          strokeWidth="2"
+                        />
+                        <path
+                          d="M12 6v6l4 2"
+                          stroke="#f59e0b"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                      <span
+                        className="orb font-black text-xs"
+                        style={{ color: "#f59e0b" }}
+                      >
+                        {pkg.duration_days} Days
+                      </span>
+                    </div>
+
+                    <p
+                      className="raj font-medium text-sm mb-5 leading-relaxed"
+                      style={{ color: "#64748b" }}
+                    >
+                      Financial product — redeemable within {pkg.duration_days}{" "}
+                      days
+                    </p>
+
+                    {/* stats */}
+                    <div className="grid grid-cols-2 gap-3 mb-5">
+                      {[
+                        {
+                          lbl: "Amount Range",
+                          val: `${Number(pkg.min_amount).toLocaleString()} – ${Number(pkg.max_amount).toLocaleString()}`,
+                          color: "#f1f5f9",
+                        },
+                        {
+                          lbl: "Daily Income",
+                          val: `${pkg.daily_rate_min}–${pkg.daily_rate_max}%`,
+                          color: "#f59e0b",
+                        },
+                      ].map((r) => (
+                        <div
+                          key={r.lbl}
+                          className="rounded-xl px-3 py-2.5"
+                          style={{
+                            background: "rgba(255,255,255,0.03)",
+                            border: "1px solid rgba(255,255,255,0.06)",
+                          }}
+                        >
+                          <p
+                            className="raj font-semibold text-xs mb-0.5"
+                            style={{ color: "#475569" }}
+                          >
+                            {r.lbl}
+                          </p>
+                          <p
+                            className="orb font-black text-sm"
+                            style={{ color: r.color }}
+                          >
+                            {r.val}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* coins row */}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p
+                          className="raj font-semibold text-xs mb-2"
+                          style={{ color: "#475569" }}
+                        >
+                          Supported
+                        </p>
+                        <div className="flex items-center gap-1.5">
+                          {SUPPORTED_COINS.map((sym) => (
+                            <div
+                              key={sym}
+                              style={{
+                                width: 28,
+                                height: 28,
+                                borderRadius: "50%",
+                                overflow: "hidden",
+                                border: "1.5px solid rgba(255,255,255,0.1)",
+                                background: `${COIN_COLORS[sym] || "#333"}20`,
+                              }}
+                            >
+                              <img
+                                src={`/assets/images/coins/${sym.toLowerCase()}-logo.png`}
+                                alt={sym}
+                                style={{
+                                  width: "100%",
+                                  height: "100%",
+                                  objectFit: "contain",
+                                }}
+                                onError={(e) =>
+                                  (e.target.style.display = "none")
+                                }
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => onSubscribe(pkg)}
+                        className="act px-5 py-2.5 rounded-xl raj font-black text-sm border-none cursor-pointer"
+                        style={{
+                          background: "linear-gradient(135deg,#f59e0b,#f97316)",
+                          color: "#080810",
+                          letterSpacing: 1.5,
+                          boxShadow: "0 6px 20px rgba(245,158,11,0.35)",
+                        }}
+                      >
+                        SUBSCRIBE
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ── SUBSCRIPTIONS ── */}
+        <div className="mt-10 fup3">
+          <SH
+            title="My Subscriptions"
+            badge={activeCount > 0 ? `${activeCount} active` : undefined}
+          />
+
+          <div
+            className="rounded-3xl overflow-hidden"
+            style={{
+              background: "#0a0a14",
+              border: "1px solid rgba(255,255,255,0.06)",
+            }}
+          >
+            {/* Desktop headers */}
+            <div
+              className="hidden md:grid grid-cols-12 px-6 py-3"
+              style={{
+                borderBottom: "1px solid rgba(255,255,255,0.05)",
+                background: "rgba(255,255,255,0.02)",
+              }}
+            >
+              {[
+                "Plan",
+                "Status",
+                "Principal",
+                "Daily",
+                "Earned",
+                "End Date",
+              ].map((h, i) => (
+                <span
+                  key={i}
+                  className={`raj font-bold text-xs tracking-widest uppercase ${i > 0 ? "text-right" : ""} ${i === 0 ? "col-span-3" : "col-span-2"} ${i === 5 ? "col-span-3" : ""}`}
+                  style={{ color: "#334155" }}
+                >
+                  {h}
+                </span>
+              ))}
+            </div>
+
+            {loadingHistory ? (
+              <div
+                className="py-16 text-center raj font-semibold text-sm"
+                style={{ color: "#334155" }}
+              >
+                Loading...
+              </div>
+            ) : subscriptions.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 gap-3">
+                <div
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center"
+                  style={{
+                    background: "rgba(255,255,255,0.02)",
+                    border: "1px solid rgba(255,255,255,0.06)",
+                  }}
+                >
+                  <svg
+                    width="22"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    style={{ color: "#1e293b" }}
+                  >
+                    <path
+                      d="M16 3h5v5M4 20L21 3M21 16v5h-5"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </div>
+                <p
+                  className="raj font-semibold text-sm"
+                  style={{ color: "#334155" }}
+                >
+                  No subscriptions yet
+                </p>
+                <p className="raj text-xs" style={{ color: "#1e293b" }}>
+                  Subscribe to a package to start earning
+                </p>
+              </div>
+            ) : (
+              subscriptions.map((sub, idx) => (
+                <div
+                  key={sub.id}
+                  className="sub-row"
+                  style={{
+                    borderBottom:
+                      idx < subscriptions.length - 1
+                        ? "1px solid rgba(255,255,255,0.04)"
+                        : "none",
+                  }}
+                >
+                  {/* Desktop row */}
+                  <div className="hidden md:grid grid-cols-12 items-center px-6 py-5">
+                    <div className="col-span-3">
                       <p
-                        className="font-bold"
-                        style={{ fontSize: "3.8vw", color: TEXT_PRIMARY }}
+                        className="raj font-bold text-sm"
+                        style={{ color: "#f1f5f9" }}
                       >
                         {sub.package_name}
                       </p>
                       <p
-                        style={{
-                          fontSize: "3vw",
-                          color: TEXT_MUTED,
-                          marginTop: 2,
-                        }}
+                        className="raj text-xs mt-0.5"
+                        style={{ color: "#475569" }}
                       >
                         {sub.duration_days} days · {sub.coin_id}
                       </p>
                     </div>
-                    <span
-                      className="px-2.5 py-1 rounded-full font-semibold"
-                      style={{
-                        fontSize: "3vw",
-                        ...(statusStyle[sub.status] || statusStyle.completed),
-                      }}
+                    <div className="col-span-2 text-right">
+                      <StatusBadge status={sub.status} />
+                    </div>
+                    <div
+                      className="col-span-2 text-right raj font-bold text-sm"
+                      style={{ color: "#f1f5f9" }}
                     >
-                      {sub.status}
-                    </span>
-                  </div>
-
-                  <div
-                    className="grid grid-cols-3 gap-3 pt-3"
-                    style={{ borderTop: `1px solid ${DARK_BORDER2}` }}
-                  >
-                    <div>
-                      <p
-                        style={{
-                          fontSize: "3vw",
-                          color: TEXT_MUTED,
-                          marginBottom: 2,
-                        }}
-                      >
-                        Principal
-                      </p>
-                      <p
-                        className="font-semibold"
-                        style={{ fontSize: "3.5vw", color: TEXT_PRIMARY }}
-                      >
-                        {Number(sub.amount).toLocaleString()}
-                      </p>
+                      {Number(sub.amount).toLocaleString()}
                     </div>
-                    <div>
-                      <p
-                        style={{
-                          fontSize: "3vw",
-                          color: TEXT_MUTED,
-                          marginBottom: 2,
-                        }}
-                      >
-                        Daily rate
-                      </p>
-                      <p
-                        className="font-semibold"
-                        style={{ fontSize: "3.5vw", color: "#a78bfa" }}
-                      >
-                        {sub.daily_rate}%
-                      </p>
+                    <div
+                      className="col-span-2 text-right raj font-bold text-sm"
+                      style={{ color: "#f59e0b" }}
+                    >
+                      {sub.daily_rate}%
                     </div>
-                    <div>
-                      <p
-                        style={{
-                          fontSize: "3vw",
-                          color: TEXT_MUTED,
-                          marginBottom: 2,
-                        }}
-                      >
-                        Earned
-                      </p>
-                      <p
-                        className="font-semibold"
-                        style={{ fontSize: "3.5vw", color: "rgb(16,185,129)" }}
-                      >
-                        +{Number(sub.total_earned).toFixed(4)}
-                      </p>
+                    <div
+                      className="col-span-2 text-right raj font-bold text-sm"
+                      style={{ color: "#10b981" }}
+                    >
+                      +{Number(sub.total_earned).toFixed(4)}
                     </div>
-                  </div>
-
-                  <div
-                    className="flex items-center justify-between mt-3 pt-3"
-                    style={{ borderTop: `1px solid ${DARK_BORDER2}` }}
-                  >
-                    <div className="flex flex-col gap-1">
-                      <p style={{ fontSize: "3vw", color: TEXT_MUTED }}>
-                        Ends {format(new Date(sub.end_date), "dd MMM yyyy")}
-                      </p>
-                      {sub.status === "active" && (
-                        <CountdownTimer endDate={sub.end_date} />
+                    <div className="col-span-1 text-right">
+                      {sub.status === "active" ? (
+                        <button
+                          onClick={() => onCancel(sub.id)}
+                          className="raj font-bold text-xs bg-transparent border-none cursor-pointer underline underline-offset-2 act"
+                          style={{ color: "#ef4444" }}
+                        >
+                          Cancel
+                        </button>
+                      ) : (
+                        <span
+                          className="raj text-xs"
+                          style={{ color: "#334155" }}
+                        >
+                          {format(new Date(sub.end_date), "dd MMM")}
+                        </span>
                       )}
                     </div>
-                    {sub.status === "active" && (
-                      <button
-                        onClick={() => onCancelSubscription(sub.id)}
-                        className="font-medium underline underline-offset-2"
-                        style={{
-                          fontSize: "3vw",
-                          color: "rgb(239,68,68)",
-                          background: "transparent",
-                          border: "none",
-                        }}
-                      >
-                        Cancel
-                      </button>
-                    )}
+                  </div>
+
+                  {/* Mobile card */}
+                  <div className="md:hidden p-5">
+                    <div
+                      className="h-0.5 rounded-full mb-4"
+                      style={{
+                        background:
+                          "linear-gradient(90deg,#f59e0b,transparent)",
+                      }}
+                    />
+                    <div className="flex items-start justify-between mb-4">
+                      <div>
+                        <p
+                          className="raj font-bold text-sm mb-0.5"
+                          style={{ color: "#f1f5f9" }}
+                        >
+                          {sub.package_name}
+                        </p>
+                        <p className="raj text-xs" style={{ color: "#475569" }}>
+                          {sub.duration_days} days · {sub.coin_id}
+                        </p>
+                      </div>
+                      <StatusBadge status={sub.status} />
+                    </div>
+                    <div
+                      className="grid grid-cols-3 gap-3 mb-4"
+                      style={{
+                        borderTop: "1px solid rgba(255,255,255,0.05)",
+                        paddingTop: 14,
+                      }}
+                    >
+                      {[
+                        {
+                          lbl: "Principal",
+                          val: Number(sub.amount).toLocaleString(),
+                          color: "#f1f5f9",
+                        },
+                        {
+                          lbl: "Daily",
+                          val: `${sub.daily_rate}%`,
+                          color: "#f59e0b",
+                        },
+                        {
+                          lbl: "Earned",
+                          val: `+${Number(sub.total_earned).toFixed(4)}`,
+                          color: "#10b981",
+                        },
+                      ].map((r) => (
+                        <div key={r.lbl}>
+                          <p
+                            className="raj text-xs mb-0.5"
+                            style={{ color: "#475569" }}
+                          >
+                            {r.lbl}
+                          </p>
+                          <p
+                            className="raj font-bold text-sm"
+                            style={{ color: r.color }}
+                          >
+                            {r.val}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                    <div
+                      className="flex items-center justify-between"
+                      style={{
+                        borderTop: "1px solid rgba(255,255,255,0.05)",
+                        paddingTop: 12,
+                      }}
+                    >
+                      <div>
+                        <p
+                          className="raj text-xs mb-1"
+                          style={{ color: "#475569" }}
+                        >
+                          Ends {format(new Date(sub.end_date), "dd MMM yyyy")}
+                        </p>
+                        {sub.status === "active" && (
+                          <CountdownTimer endDate={sub.end_date} />
+                        )}
+                      </div>
+                      {sub.status === "active" && (
+                        <button
+                          onClick={() => onCancel(sub.id)}
+                          className="raj font-bold text-xs bg-transparent border-none cursor-pointer underline underline-offset-2"
+                          style={{ color: "#ef4444" }}
+                        >
+                          Cancel
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
-        )}
+        </div>
       </div>
-
-      <div className="h-8" />
     </div>
   );
 };
 
-/* ════════════════════════════════════════════════════════════════
+/* ════════════════════════════════
    ARBITRAGE DETAIL PAGE
-════════════════════════════════════════════════════════════════ */
+════════════════════════════════ */
 const ArbitragePage = ({
   onBack,
-  selectedPackage,
+  selectedPackage: pkg,
   onSubscribed,
   onWalletsRefresh,
   wallets,
 }) => {
   const { user } = useUser();
+  const navigate = useNavigate();
   const [amount, setAmount] = useState("");
   const [sliderVal, setSliderVal] = useState(0);
   const [selectedCoin, setSelectedCoin] = useState("USDT");
   const [submitting, setSubmitting] = useState(false);
-  const navigate = useNavigate();
 
-  const pkg = selectedPackage;
   const selectedWallet = wallets?.find(
     (w) => w.coin_symbol?.toUpperCase() === selectedCoin,
   );
@@ -746,13 +862,14 @@ const ArbitragePage = ({
     pkg && amount
       ? ((parseFloat(amount) * parseFloat(pkg.daily_rate_min)) / 100).toFixed(2)
       : "0.00";
-  const isInsufficientBalance = parseFloat(amount) > maxBalance;
+  const insufficient = parseFloat(amount) > maxBalance;
 
-  const benefits = [
-    "Daily income is sent to your USDT, BTC, ETH wallet",
-    "Zero risk of your investment funds",
-    "You can get your funds back anytime",
-    "Artificial intelligence works 24 hours a day",
+  const BENEFITS = [
+    "Daily income credited to your USDT, BTC, or ETH wallet",
+    "Zero risk of investment funds — principal always protected",
+    "Withdraw your funds back anytime with zero penalties",
+    "Artificial intelligence operates and optimizes 24/7",
+    "Transparent real-time tracking of all earnings",
   ];
 
   const handleSubscribe = async () => {
@@ -767,7 +884,7 @@ const ArbitragePage = ({
       return toast.error(
         `Maximum amount is ${Number(pkg.max_amount).toLocaleString()}`,
       );
-    if (isInsufficientBalance) return toast.error("Insufficient balance");
+    if (insufficient) return toast.error("Insufficient balance");
     try {
       setSubmitting(true);
       await subscribePackage({
@@ -787,473 +904,572 @@ const ArbitragePage = ({
   };
 
   const handleRecharge = () => {
-    const wallet = wallets?.find(
+    const w = wallets?.find(
       (w) => w.coin_symbol?.toUpperCase() === selectedCoin,
     );
-    if (wallet)
-      navigate("/funds", { state: { wallet, coinAmount: wallet.coin_amount } });
-    else toast.error("Wallet not found for selected coin");
+    if (w)
+      navigate("/funds", { state: { wallet: w, coinAmount: w.coin_amount } });
+    else toast.error("Wallet not found");
   };
 
   return (
-    <div className="min-h-screen pb-8" style={{ background: DARK_BG }}>
-      {/* Custom header */}
+    <div
+      className="min-h-screen pb-16"
+      style={{ background: "#080810", color: "#e2e8f0" }}
+    >
+      {/* Back header */}
       <div
-        className="flex items-center justify-between px-4 py-3 sticky top-0 z-10"
+        className="flex items-center gap-3 px-4 md:px-8 py-3 sticky top-0 z-50"
         style={{
-          background: "#0a0a0f",
-          borderBottom: "1px solid rgba(255,255,255,0.07)",
+          background: "rgba(8,8,16,0.92)",
+          backdropFilter: "blur(18px)",
+          borderBottom: "1px solid rgba(245,158,11,0.08)",
         }}
       >
         <button
           onClick={onBack}
-          className="w-9 h-9 flex items-center justify-center rounded-full flex-shrink-0"
+          className="flex items-center justify-center flex-shrink-0 border-none cursor-pointer act"
           style={{
-            background: "rgba(255,255,255,0.06)",
-            border: "none",
-            cursor: "pointer",
+            width: 38,
+            height: 38,
+            borderRadius: 12,
+            background: "rgba(245,158,11,0.08)",
+            border: "1px solid rgba(245,158,11,0.2)",
           }}
         >
-          <IoMdArrowRoundBack color="white" size={25} />
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M19 12H5"
+              stroke="#f59e0b"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M11 6l-6 6 6 6"
+              stroke="#f97316"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
         </button>
         <span
-          className="font-semibold truncate mx-3 flex-1 text-center"
-          style={{ color: "#f1f5f9", fontSize: "4.2vw" }}
+          className="orb font-black tracking-wider flex-1 text-center"
+          style={{ fontSize: "clamp(13px,3.8vw,16px)", color: "#f1f5f9" }}
         >
-          Arbitrage
+          AI Arbitrage
         </span>
-        <div className="w-9 h-9" />
+        <div style={{ width: 38 }} />
       </div>
 
-      {/* Gradient header */}
-      <div
-        className="relative overflow-hidden flex flex-col items-center pt-6 pb-16 px-5"
-        style={{
-          background:
-            "linear-gradient(145deg,#7c3aed 0%,#a855f7 50%,#ec4899 100%)",
-          minHeight: 160,
-        }}
-      >
-        <div
-          className="absolute top-0 right-0 w-52 h-52 rounded-full opacity-20 pointer-events-none"
-          style={{
-            background: "#fff",
-            filter: "blur(48px)",
-            transform: "translate(30%,-30%)",
-          }}
-        />
-        <p
-          className="text-white font-extrabold relative z-10"
-          style={{ fontSize: "5.5vw" }}
-        >
-          {pkg ? pkg.name : "AI Arbitrage"}
-        </p>
-        {pkg && (
-          <p
-            className="text-white/70 relative z-10 mt-1"
-            style={{ fontSize: "3.5vw" }}
-          >
-            {pkg.duration_days} days · {pkg.daily_rate_min}–{pkg.daily_rate_max}
-            % daily
-          </p>
-        )}
-      </div>
-
-      {/* Hero banner */}
-      <div className="mx-4 -mt-8 relative z-10 mb-4">
-        <div
-          className="rounded-3xl overflow-hidden shadow-xl"
-          style={{
-            background:
-              "linear-gradient(135deg,#3b4fd8 0%,#6366f1 55%,#818cf8 100%)",
-          }}
-        >
-          <div className="px-5 py-5 flex items-center justify-between">
-            <div>
-              <p
-                className="text-cyan-300 font-extrabold mb-1"
-                style={{ fontSize: "5.5vw" }}
-              >
-                Join AI Arbitrage
-              </p>
-              <p className="text-indigo-200" style={{ fontSize: "3.5vw" }}>
-                Zero risk, fast return
-              </p>
-            </div>
-            <div className="w-16 h-16 flex-shrink-0 flex items-center justify-center">
-              <div
-                className="w-12 h-14 rounded-2xl flex flex-col items-center justify-center gap-1"
-                style={{
-                  background: "rgba(255,255,255,0.12)",
-                  boxShadow: "0 4px 16px rgba(99,102,241,0.3)",
-                }}
-              >
-                <div className="flex gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded-full bg-indigo-400" />
-                  <div className="w-2.5 h-2.5 rounded-full bg-indigo-400" />
-                </div>
-                <div className="w-6 h-1.5 rounded-full bg-cyan-400" />
-                <p
-                  className="text-indigo-200 font-bold"
-                  style={{ fontSize: "3vw" }}
-                >
-                  AI
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Main detail card */}
-      <div
-        className="mx-4 rounded-3xl overflow-hidden mb-4"
-        style={{ background: DARK_CARD, border: `1px solid ${DARK_BORDER}` }}
-      >
-        <div
-          className="h-1"
-          style={{ background: "linear-gradient(90deg,#7c3aed,#ec4899)" }}
-        />
-        <div className="px-5 py-5">
-          {/* Header row */}
+      <div className="px-4 md:px-8 lg:px-16 max-w-screen-xl mx-auto">
+        {/* ── Hero banner ── */}
+        <div className="mt-6 fup">
           <div
-            className="flex items-center justify-between mb-5 pb-4"
-            style={{ borderBottom: `1px solid ${DARK_BORDER2}` }}
+            className="relative rounded-3xl overflow-hidden"
+            style={{
+              background: "linear-gradient(135deg,#0f1020,#0d0d1a 55%,#140f1a)",
+              border: "1px solid rgba(245,158,11,0.14)",
+            }}
           >
-            <div className="flex items-center gap-2">
-              <ShieldIcon />
-              <span
-                className="font-bold"
-                style={{ fontSize: "4vw", color: TEXT_PRIMARY }}
-              >
-                AI Arbitrage
-              </span>
-            </div>
-            {pkg && (
-              <div
-                className="px-3 py-1 rounded-xl font-bold"
-                style={{
-                  background: "rgba(124,58,237,0.2)",
-                  color: "#a78bfa",
-                  fontSize: "3.5vw",
-                }}
-              >
-                {pkg.duration_days} Days
-              </div>
-            )}
-          </div>
-
-          {/* Stats grid */}
-          <div
-            className="grid grid-cols-2 gap-x-6 gap-y-4 mb-5 pb-5"
-            style={{ borderBottom: `1px solid ${DARK_BORDER2}` }}
-          >
-            <div>
-              <p
-                style={{ color: TEXT_MUTED, fontSize: "3vw", marginBottom: 4 }}
-              >
-                Amount range
-              </p>
-              <p
-                className="font-semibold"
-                style={{ fontSize: "3.5vw", color: TEXT_PRIMARY }}
-              >
-                {pkg
-                  ? `${Number(pkg.min_amount).toLocaleString()} – ${Number(pkg.max_amount).toLocaleString()}`
-                  : "—"}
-              </p>
-            </div>
-            <div>
-              <p
-                style={{ color: TEXT_MUTED, fontSize: "3vw", marginBottom: 4 }}
-              >
-                Daily income
-              </p>
-              <p
-                className="font-extrabold"
-                style={{ fontSize: "3.5vw", color: "#a78bfa" }}
-              >
-                {pkg ? `${pkg.daily_rate_min}–${pkg.daily_rate_max}%` : "—"}
-              </p>
-            </div>
-            <div>
-              <p
-                style={{ color: TEXT_MUTED, fontSize: "3vw", marginBottom: 4 }}
-              >
-                Available ({selectedCoin})
-              </p>
-              <p
-                className="font-semibold"
-                style={{ fontSize: "3.5vw", color: TEXT_PRIMARY }}
-              >
-                {maxBalance.toFixed(4)}
-              </p>
-            </div>
-            <div>
-              <p
-                style={{ color: TEXT_MUTED, fontSize: "3vw", marginBottom: 4 }}
-              >
-                Expected earnings/day
-              </p>
-              <p
-                className="font-extrabold"
-                style={{ fontSize: "3.5vw", color: "rgb(16,185,129)" }}
-              >
-                {expectedEarnings}
-              </p>
-            </div>
-          </div>
-
-          {/* Coin selector */}
-          <div
-            className="mb-5 pb-5"
-            style={{ borderBottom: `1px solid ${DARK_BORDER2}` }}
-          >
-            <p
-              style={{
-                color: TEXT_MUTED,
-                fontSize: "3vw",
-                fontWeight: 500,
-                marginBottom: 12,
-              }}
-            >
-              Select coin
-            </p>
-            <div className="flex items-center gap-3">
-              {SUPPORTED_COINS.map((symbol) => (
-                <div key={symbol} className="flex flex-col items-center gap-1">
-                  <CoinLogo
-                    symbol={symbol}
-                    size={40}
-                    selected={selectedCoin === symbol}
-                    onClick={() => setSelectedCoin(symbol)}
-                  />
-                  <span
-                    className="font-semibold"
-                    style={{
-                      fontSize: "3vw",
-                      color: selectedCoin === symbol ? "#a78bfa" : TEXT_MUTED,
-                    }}
-                  >
-                    {symbol}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Amount input */}
-          <div className="mb-4">
-            <div className="flex items-center justify-between mb-2">
-              <p
-                className="font-semibold"
-                style={{ fontSize: "3.8vw", color: TEXT_PRIMARY }}
-              >
-                Hosting Amount
-              </p>
-              <div className="flex items-center gap-2">
-                <span style={{ fontSize: "3vw", color: TEXT_MUTED }}>
-                  {maxBalance.toFixed(4)} {selectedCoin}
-                </span>
-                {maxBalance <= 0 ? (
-                  <button
-                    onClick={handleRecharge}
-                    className="font-bold px-2.5 py-1 rounded-lg text-white"
-                    style={{
-                      fontSize: "3vw",
-                      background: "linear-gradient(90deg,#f472b6,#a855f7)",
-                    }}
-                  >
-                    + Recharge
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => {
-                      setAmount(maxBalance.toString());
-                      setSliderVal(100);
-                    }}
-                    className="font-semibold"
-                    style={{
-                      fontSize: "3vw",
-                      color: "#a78bfa",
-                      background: "transparent",
-                      border: "none",
-                    }}
-                  >
-                    Max
-                  </button>
-                )}
-              </div>
-            </div>
-
             <div
-              className="flex items-center gap-3 px-4 py-3 rounded-2xl transition-all"
+              className="absolute pointer-events-none rounded-full"
               style={{
-                border: `2px solid ${isInsufficientBalance ? "#ef4444" : parseFloat(amount) > 0 ? ACCENT : DARK_BORDER}`,
-                background: "rgba(255,255,255,0.03)",
-              }}
-            >
-              <CoinLogo symbol={selectedCoin} size={32} />
-              <div className="flex items-center gap-1">
-                <ArrowsUpDown />
-              </div>
-              <input
-                type="number"
-                min={0}
-                value={amount}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setAmount(val);
-                  if (maxBalance > 0)
-                    setSliderVal(
-                      Math.min(100, (parseFloat(val) / maxBalance) * 100) || 0,
-                    );
-                }}
-                placeholder="0.00"
-                className="flex-1 bg-transparent font-bold outline-none"
-                style={{ fontSize: "5vw", color: TEXT_PRIMARY }}
-              />
-              <span
-                style={{
-                  fontSize: "3.5vw",
-                  color: TEXT_MUTED,
-                  fontWeight: 500,
-                }}
-              >
-                {selectedCoin}
-              </span>
-            </div>
-          </div>
-
-          {/* Insufficient / min-max */}
-          <div className="flex items-center justify-between mb-5">
-            {isInsufficientBalance ? (
-              <div className="flex items-center justify-between w-full">
-                <p
-                  className="font-semibold"
-                  style={{ fontSize: "3vw", color: "rgb(239,68,68)" }}
-                >
-                  Insufficient balance
-                </p>
-                <button
-                  onClick={handleRecharge}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-white transition-transform active:scale-95"
-                  style={{
-                    fontSize: "3vw",
-                    background: "linear-gradient(90deg,#f472b6,#a855f7)",
-                    boxShadow: "0 4px 12px rgba(168,85,247,0.3)",
-                  }}
-                >
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                    <path
-                      d="M6 1v10M1 6h10"
-                      stroke="white"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                  Recharge {selectedCoin}
-                </button>
-              </div>
-            ) : (
-              <p style={{ fontSize: "3vw", color: TEXT_MUTED }}>
-                {pkg
-                  ? `Min: ${Number(pkg.min_amount).toLocaleString()} · Max: ${Number(pkg.max_amount).toLocaleString()}`
-                  : ""}
-              </p>
-            )}
-          </div>
-
-          {/* Slider */}
-          <div className="mb-5">
-            <input
-              type="range"
-              min={0}
-              max={100}
-              value={sliderVal}
-              step={1}
-              onChange={(e) => {
-                const val = parseInt(e.target.value);
-                setSliderVal(val);
-                setAmount(((maxBalance * val) / 100).toFixed(4));
-              }}
-              className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
-              style={{
-                background: `linear-gradient(90deg, ${ACCENT} ${sliderVal}%, rgba(255,255,255,0.1) ${sliderVal}%)`,
-                accentColor: ACCENT,
+                top: -60,
+                right: -60,
+                width: 200,
+                height: 200,
+                background:
+                  "radial-gradient(circle,rgba(245,158,11,.1),transparent 70%)",
               }}
             />
             <div
-              className="flex justify-between mt-1"
-              style={{ fontSize: "3vw", color: TEXT_SUB }}
+              className="absolute top-0 inset-x-0 h-px"
+              style={{
+                background:
+                  "linear-gradient(90deg,transparent,#f59e0b,#f97316,transparent)",
+              }}
+            />
+
+            <div className="relative z-10 p-6 md:p-8 flex flex-col md:flex-row md:items-center gap-5">
+              <div
+                className="w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0"
+                style={{
+                  background: "rgba(245,158,11,0.1)",
+                  border: "1px solid rgba(245,158,11,0.2)",
+                }}
+              >
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M16 3h5v5M4 20L21 3M21 16v5h-5"
+                    stroke="#f59e0b"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <p
+                  className="orb font-black mb-1"
+                  style={{ fontSize: "clamp(18px,4vw,26px)", color: "#f1f5f9" }}
+                >
+                  {pkg ? pkg.name : "AI Arbitrage"}
+                </p>
+                {pkg && (
+                  <p
+                    className="raj font-medium text-sm"
+                    style={{ color: "#64748b" }}
+                  >
+                    {pkg.duration_days} days · {pkg.daily_rate_min}–
+                    {pkg.daily_rate_max}% daily income
+                  </p>
+                )}
+              </div>
+              {pkg && (
+                <div className="flex flex-wrap gap-3">
+                  {[
+                    {
+                      lbl: "Duration",
+                      val: `${pkg.duration_days}d`,
+                      color: "#f59e0b",
+                    },
+                    {
+                      lbl: "Daily Rate",
+                      val: `${pkg.daily_rate_min}–${pkg.daily_rate_max}%`,
+                      color: "#10b981",
+                    },
+                    {
+                      lbl: "Range",
+                      val: `${Number(pkg.min_amount).toLocaleString()}+`,
+                      color: "#3b82f6",
+                    },
+                  ].map((s) => (
+                    <div
+                      key={s.lbl}
+                      className="rounded-2xl px-4 py-2.5 text-center"
+                      style={{
+                        background: "rgba(255,255,255,.03)",
+                        border: "1px solid rgba(255,255,255,.07)",
+                        minWidth: 90,
+                      }}
+                    >
+                      <p
+                        className="orb font-black text-sm mb-0.5"
+                        style={{ color: s.color }}
+                      >
+                        {s.val}
+                      </p>
+                      <p
+                        className="raj font-semibold text-xs"
+                        style={{ color: "#334155" }}
+                      >
+                        {s.lbl}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Two-col layout ── */}
+        <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6 fup2">
+          {/* LEFT: Subscribe form */}
+          <div
+            className="rounded-3xl overflow-hidden"
+            style={{
+              background: "#0a0a14",
+              border: "1px solid rgba(245,158,11,0.12)",
+            }}
+          >
+            <div
+              className="px-6 py-5"
+              style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}
             >
-              <span>0%</span>
-              <span>25%</span>
-              <span>50%</span>
-              <span>75%</span>
-              <span>100%</span>
+              <p
+                className="orb font-black text-base"
+                style={{ color: "#f1f5f9" }}
+              >
+                Subscribe
+              </p>
+            </div>
+            <div className="px-6 py-6 flex flex-col gap-5">
+              {/* Coin selector */}
+              <div>
+                <p
+                  className="raj font-bold text-xs tracking-widest uppercase mb-3"
+                  style={{ color: "#475569" }}
+                >
+                  Select Coin
+                </p>
+                <div className="flex items-center gap-4">
+                  {SUPPORTED_COINS.map((sym) => (
+                    <CoinIcon
+                      key={sym}
+                      symbol={sym}
+                      size={44}
+                      selected={selectedCoin === sym}
+                      onClick={() => setSelectedCoin(sym)}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Available balance */}
+              <div
+                className="flex items-center justify-between px-4 py-3 rounded-2xl"
+                style={{
+                  background: "rgba(255,255,255,0.02)",
+                  border: "1px solid rgba(255,255,255,0.06)",
+                }}
+              >
+                <span
+                  className="raj font-semibold text-sm"
+                  style={{ color: "#64748b" }}
+                >
+                  Available ({selectedCoin})
+                </span>
+                <div className="flex items-center gap-2.5">
+                  <span
+                    className="orb font-black text-sm"
+                    style={{ color: maxBalance > 0 ? "#f1f5f9" : "#334155" }}
+                  >
+                    {maxBalance.toFixed(4)}
+                  </span>
+                  {maxBalance <= 0 ? (
+                    <button
+                      onClick={handleRecharge}
+                      className="raj font-bold text-xs px-3 py-1.5 rounded-lg border-none cursor-pointer act"
+                      style={{
+                        background: "rgba(245,158,11,0.12)",
+                        color: "#f59e0b",
+                        border: "1px solid rgba(245,158,11,0.2)",
+                      }}
+                    >
+                      + RECHARGE
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setAmount(maxBalance.toString());
+                        setSliderVal(100);
+                      }}
+                      className="raj font-bold text-xs border-none cursor-pointer bg-transparent act"
+                      style={{ color: "#f59e0b" }}
+                    >
+                      MAX
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Amount input */}
+              <div>
+                <p
+                  className="raj font-bold text-xs tracking-widest uppercase mb-2"
+                  style={{ color: "#475569" }}
+                >
+                  Hosting Amount
+                </p>
+                <div
+                  className="iw flex items-center gap-3 px-4 py-4 rounded-2xl"
+                  style={{
+                    border: `1.5px solid ${insufficient ? "#ef4444" : parseFloat(amount) > 0 ? "rgba(245,158,11,0.4)" : "rgba(255,255,255,0.08)"}`,
+                    background: "rgba(255,255,255,0.02)",
+                    transition: "border-color .2s",
+                  }}
+                >
+                  <CoinIcon symbol={selectedCoin} size={28} />
+                  <input
+                    type="number"
+                    min={0}
+                    placeholder="0.00"
+                    value={amount}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setAmount(v);
+                      if (maxBalance > 0)
+                        setSliderVal(
+                          Math.min(100, (parseFloat(v) / maxBalance) * 100) ||
+                            0,
+                        );
+                    }}
+                    className="flex-1 bg-transparent outline-none border-none raj font-black"
+                    style={{
+                      fontSize: "clamp(18px,4vw,24px)",
+                      color: "#f1f5f9",
+                    }}
+                  />
+                  <span
+                    className="raj font-semibold text-sm flex-shrink-0"
+                    style={{ color: "#475569" }}
+                  >
+                    {selectedCoin}
+                  </span>
+                </div>
+                {insufficient ? (
+                  <div className="flex items-center justify-between mt-2">
+                    <p
+                      className="raj font-semibold text-xs"
+                      style={{ color: "#ef4444" }}
+                    >
+                      Insufficient balance
+                    </p>
+                    <button
+                      onClick={handleRecharge}
+                      className="raj font-bold text-xs px-3 py-1.5 rounded-lg border-none cursor-pointer act"
+                      style={{
+                        background: "rgba(239,68,68,0.1)",
+                        color: "#ef4444",
+                        border: "1px solid rgba(239,68,68,0.2)",
+                      }}
+                    >
+                      RECHARGE
+                    </button>
+                  </div>
+                ) : (
+                  <p className="raj text-xs mt-2" style={{ color: "#334155" }}>
+                    {pkg
+                      ? `Min: ${Number(pkg.min_amount).toLocaleString()} · Max: ${Number(pkg.max_amount).toLocaleString()}`
+                      : ""}
+                  </p>
+                )}
+              </div>
+
+              {/* Slider */}
+              <div>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={sliderVal}
+                  step={1}
+                  onChange={(e) => {
+                    const v = parseInt(e.target.value);
+                    setSliderVal(v);
+                    setAmount(((maxBalance * v) / 100).toFixed(4));
+                  }}
+                  className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
+                  style={{
+                    background: `linear-gradient(90deg,#f59e0b ${sliderVal}%,rgba(255,255,255,0.1) ${sliderVal}%)`,
+                    accentColor: "#f59e0b",
+                  }}
+                />
+                <div
+                  className="flex justify-between mt-1 raj font-semibold text-xs"
+                  style={{ color: "#334155" }}
+                >
+                  {["0%", "25%", "50%", "75%", "100%"].map((v) => (
+                    <span key={v}>{v}</span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Expected earnings */}
+              <div
+                className="flex items-center justify-between px-4 py-3 rounded-2xl"
+                style={{
+                  background: "rgba(16,185,129,0.05)",
+                  border: "1px solid rgba(16,185,129,0.12)",
+                }}
+              >
+                <span
+                  className="raj font-semibold text-sm"
+                  style={{ color: "#64748b" }}
+                >
+                  Est. daily earnings
+                </span>
+                <span
+                  className="orb font-black text-base"
+                  style={{ color: "#10b981" }}
+                >
+                  ${expectedEarnings}
+                </span>
+              </div>
+
+              {/* Subscribe button */}
+              <button
+                onClick={handleSubscribe}
+                disabled={
+                  submitting ||
+                  !amount ||
+                  parseFloat(amount) <= 0 ||
+                  insufficient
+                }
+                className="act w-full py-4 rounded-2xl raj font-black text-sm border-none cursor-pointer"
+                style={{
+                  background: "linear-gradient(135deg,#f59e0b,#f97316)",
+                  color: "#080810",
+                  letterSpacing: 2,
+                  boxShadow: "0 6px 20px rgba(245,158,11,0.3)",
+                  opacity: submitting ? 0.6 : 1,
+                  cursor:
+                    submitting ||
+                    !amount ||
+                    parseFloat(amount) <= 0 ||
+                    insufficient
+                      ? "not-allowed"
+                      : "pointer",
+                  transition: "transform .18s",
+                }}
+              >
+                {submitting ? "PROCESSING..." : "HOST NOW"}
+              </button>
             </div>
           </div>
 
-          {/* Subscribe button */}
-          <button
-            onClick={handleSubscribe}
-            disabled={
-              submitting ||
-              !amount ||
-              parseFloat(amount) <= 0 ||
-              isInsufficientBalance
-            }
-            className="w-full py-4 rounded-2xl text-white font-extrabold transition-transform active:scale-98 disabled:opacity-50"
-            style={{
-              fontSize: "4.5vw",
-              background: "linear-gradient(90deg,#f472b6,#a855f7)",
-              boxShadow: "0 8px 24px rgba(168,85,247,0.4)",
-            }}
-          >
-            {submitting ? "Processing..." : "Hosting Now"}
-          </button>
-        </div>
-      </div>
-
-      {/* Benefits */}
-      <div
-        className="mx-4 rounded-3xl px-5 py-5"
-        style={{ background: DARK_CARD, border: `1px solid ${DARK_BORDER}` }}
-      >
-        <p
-          className="font-bold mb-4"
-          style={{ fontSize: "4vw", color: TEXT_PRIMARY }}
-        >
-          Why choose AI Arbitrage?
-        </p>
-        <div className="flex flex-col gap-3">
-          {benefits.map((b, i) => (
-            <div key={i} className="flex items-start gap-3">
-              <CheckIcon />
-              <p
+          {/* RIGHT: info + benefits */}
+          <div className="flex flex-col gap-5">
+            {/* Plan details */}
+            {pkg && (
+              <div
+                className="rounded-3xl overflow-hidden"
                 style={{
-                  fontSize: "3.5vw",
-                  color: TEXT_MUTED,
-                  lineHeight: 1.6,
+                  background: "#0a0a14",
+                  border: "1px solid rgba(255,255,255,0.07)",
                 }}
               >
-                {b}
-              </p>
+                <div
+                  className="px-6 py-5"
+                  style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}
+                >
+                  <p
+                    className="orb font-black text-base"
+                    style={{ color: "#f1f5f9" }}
+                  >
+                    Plan Details
+                  </p>
+                </div>
+                <div className="px-6 py-4">
+                  {[
+                    { lbl: "Package", val: pkg.name, color: "#f1f5f9" },
+                    {
+                      lbl: "Duration",
+                      val: `${pkg.duration_days} Days`,
+                      color: "#f59e0b",
+                    },
+                    {
+                      lbl: "Daily Rate",
+                      val: `${pkg.daily_rate_min}–${pkg.daily_rate_max}%`,
+                      color: "#10b981",
+                    },
+                    {
+                      lbl: "Min. Amount",
+                      val: Number(pkg.min_amount).toLocaleString(),
+                      color: "#f1f5f9",
+                    },
+                    {
+                      lbl: "Max. Amount",
+                      val: Number(pkg.max_amount).toLocaleString(),
+                      color: "#f1f5f9",
+                    },
+                    {
+                      lbl: "Est. Today",
+                      val: `$${expectedEarnings}`,
+                      color: "#10b981",
+                    },
+                  ].map((r, i, arr) => (
+                    <div
+                      key={r.lbl}
+                      className="flex items-center justify-between py-3.5"
+                      style={{
+                        borderBottom:
+                          i < arr.length - 1
+                            ? "1px solid rgba(255,255,255,0.04)"
+                            : "none",
+                      }}
+                    >
+                      <span
+                        className="raj font-semibold text-sm"
+                        style={{ color: "#475569" }}
+                      >
+                        {r.lbl}
+                      </span>
+                      <span
+                        className="raj font-bold text-sm"
+                        style={{ color: r.color }}
+                      >
+                        {r.val}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Benefits */}
+            <div
+              className="rounded-3xl overflow-hidden"
+              style={{
+                background: "#0a0a14",
+                border: "1px solid rgba(255,255,255,0.07)",
+              }}
+            >
+              <div
+                className="px-6 py-5"
+                style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}
+              >
+                <p
+                  className="orb font-black text-base"
+                  style={{ color: "#f1f5f9" }}
+                >
+                  Why AI Arbitrage?
+                </p>
+              </div>
+              <div className="px-6 py-4">
+                {BENEFITS.map((b, i) => (
+                  <div
+                    key={i}
+                    className="flex items-start gap-3 py-3"
+                    style={{
+                      borderBottom:
+                        i < BENEFITS.length - 1
+                          ? "1px solid rgba(255,255,255,0.04)"
+                          : "none",
+                    }}
+                  >
+                    <div
+                      className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
+                      style={{
+                        background: "rgba(245,158,11,0.12)",
+                        border: "1px solid rgba(245,158,11,0.25)",
+                      }}
+                    >
+                      <svg width="9" height="9" viewBox="0 0 10 10" fill="none">
+                        <path
+                          d="M2 5l2 2 4-4"
+                          stroke="#f59e0b"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </div>
+                    <p
+                      className="raj font-medium text-sm leading-relaxed"
+                      style={{ color: "#94a3b8" }}
+                    >
+                      {b}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
-          ))}
+          </div>
         </div>
       </div>
     </div>
   );
 };
 
-/* ════════════════════════════════════════════════════════════════
+/* ════════════════════════════════
    ROOT
-════════════════════════════════════════════════════════════════ */
+════════════════════════════════ */
 export default function ArbitrageRoot() {
   const { user } = useUser();
-  // Expects useWallets to expose a refreshWallets fn — see note below
   const { wallets, refreshWallets } = useWallets(user?.id);
   const [page, setPage] = useState("hosting");
   const [selectedPackage, setSelectedPackage] = useState(null);
@@ -1294,41 +1510,59 @@ export default function ArbitrageRoot() {
     }
   };
 
-  const handleGoToArbitrage = (pkg) => {
-    setSelectedPackage(pkg);
-    setPage("arbitrage");
-  };
-
-  const handleCancelSubscription = async (subscriptionId) => {
+  const handleCancel = async (subId) => {
     try {
-      await cancelSubscription({ subscriptionId, userId: user.id });
-      toast.success("Subscription cancelled — principal returned to balance");
+      await cancelSubscription({ subscriptionId: subId, userId: user.id });
+      toast.success("Cancelled — principal returned");
       await Promise.all([fetchSubscriptions(), refreshWallets()]);
     } catch (err) {
       toast.error(err?.response?.data?.error || "Failed to cancel");
     }
   };
 
-  if (page === "arbitrage") {
-    return (
-      <ArbitragePage
-        onBack={() => setPage("hosting")}
-        selectedPackage={selectedPackage}
-        onSubscribed={fetchSubscriptions}
-        onWalletsRefresh={refreshWallets}
-        wallets={supportedWallets}
-      />
-    );
-  }
-
   return (
-    <HostingWorkPage
-      onGoToArbitrage={handleGoToArbitrage}
-      packages={packages}
-      subscriptions={subscriptions}
-      loadingHistory={loadingHistory}
-      onCancelSubscription={handleCancelSubscription}
-      wallets={supportedWallets}
-    />
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@700;900&display=swap');
+        .orb{font-family:'Orbitron',sans-serif!important}
+        .raj{font-family:'Rajdhani',sans-serif!important}
+        @keyframes pulse-ring{0%{transform:scale(1);opacity:.8}100%{transform:scale(1.6);opacity:0}}
+        @keyframes fup{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+        .fup{animation:fup .5s ease both}
+        .fup2{animation:fup .5s ease both;animation-delay:.1s;opacity:0}
+        .fup3{animation:fup .5s ease both;animation-delay:.2s;opacity:0}
+        .pkg-card{transition:transform .22s;cursor:pointer}
+        .pkg-card:hover{transform:translateY(-4px)}
+        .sub-row{transition:background .15s}
+        .sub-row:hover{background:rgba(245,158,11,0.02)!important}
+        .act{transition:transform .18s}
+        .act:hover{transform:translateY(-2px)}
+        .act:active{transform:scale(.96)}
+        input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none}
+        input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#f59e0b;cursor:pointer;box-shadow:0 0 8px rgba(245,158,11,0.5)}
+      `}</style>
+
+      {page === "arbitrage" ? (
+        <ArbitragePage
+          onBack={() => setPage("hosting")}
+          selectedPackage={selectedPackage}
+          onSubscribed={fetchSubscriptions}
+          onWalletsRefresh={refreshWallets}
+          wallets={supportedWallets}
+        />
+      ) : (
+        <HostingPage
+          onSubscribe={(pkg) => {
+            setSelectedPackage(pkg);
+            setPage("arbitrage");
+          }}
+          packages={packages}
+          subscriptions={subscriptions}
+          loadingHistory={loadingHistory}
+          onCancel={handleCancel}
+          wallets={wallets}
+        />
+      )}
+    </>
   );
 }

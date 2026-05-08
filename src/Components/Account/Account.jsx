@@ -1,35 +1,55 @@
-import React, { useEffect, useState, useCallback } from "react";
-import Header from "../Header/Header";
-import { Link } from "react-router-dom";
+import React, { useEffect, useState, useRef } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import useWallets from "../../hooks/useWallets";
 import { useUser } from "../../context/UserContext";
 import useCryptoTradeConverter from "../../hooks/userCryptoTradeConverter";
 import axios from "axios";
 import { API_BASE_URL } from "../../api/getApiURL";
 import { MdVerified } from "react-icons/md";
+import AppNav from "../Home/Navbar";
 
-const VerifiedBadge = () => (
-  <MdVerified
-    size={15}
-    style={{
-      flexShrink: 0,
-      color: "#1877F2",
-      filter: "drop-shadow(0 0 0 white)",
-    }}
-  />
-);
-
-// ── Coin logo: resolves uploaded file, CDN URL, or local asset ───────────────
 const resolveLogoSrc = (wallet) => {
   const { coin_logo, coin_symbol } = wallet;
   if (coin_logo) {
     if (coin_logo.startsWith("uploads/")) return `${API_BASE_URL}/${coin_logo}`;
-    if (coin_logo.startsWith("http")) return coin_logo; // CDN URL
+    if (coin_logo.startsWith("http")) return coin_logo;
   }
-  return `/assets/images/coins/${coin_symbol.toLowerCase()}-logo.png`; // local fallback
+  return `/assets/images/coins/${coin_symbol.toLowerCase()}-logo.png`;
 };
 
+const EyeOpen = () => (
+  <svg
+    width="15"
+    height="15"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+    <circle cx="12" cy="12" r="3" />
+  </svg>
+);
+
+const EyeOff = () => (
+  <svg
+    width="15"
+    height="15"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24M1 1l22 22" />
+  </svg>
+);
+
 function Account() {
+  const navigate = useNavigate();
   const { user, setUser } = useUser();
   const { wallets } = useWallets(user?.id);
   const [searchTerm, setSearchTerm] = useState("");
@@ -38,457 +58,554 @@ function Account() {
   const [balanceVisible, setBalanceVisible] = useState(
     () => user?.balance_visible === 1 || user?.balance_visible === true,
   );
-
-  const fetchConvertedValues = useCallback(async () => {
-    if (!wallets?.length) return;
-    const newCoinValues = {};
-    for (const wallet of wallets) {
-      try {
-        const convertedCoin = await convertUSDTToCoin(
-          wallet?.coin_amount,
-          wallet.coin_id,
-        );
-        newCoinValues[wallet.coin_id] = convertedCoin;
-      } catch {
-        newCoinValues[wallet.coin_id] = null;
-      }
-    }
-    setCoinValues(newCoinValues);
-  }, [wallets, convertUSDTToCoin]);
+  const convertedRef = useRef(false);
 
   useEffect(() => {
+    if (!wallets?.length) return;
+    if (convertedRef.current) return; // ← already done, skip
+    convertedRef.current = true;
+
+    const fetchConvertedValues = async () => {
+      const result = {};
+      for (const w of wallets) {
+        try {
+          result[w.coin_id] = await convertUSDTToCoin(w.coin_amount, w.coin_id);
+        } catch {
+          result[w.coin_id] = null;
+        }
+      }
+      setCoinValues(result);
+    };
+
     fetchConvertedValues();
-  }, [fetchConvertedValues]);
+  }, [wallets?.length, convertUSDTToCoin, wallets]);
 
   const toggleBalance = async () => {
-    const newVal = !balanceVisible;
-    setBalanceVisible(newVal);
+    const next = !balanceVisible;
+    setBalanceVisible(next);
     try {
       await axios.put(`${API_BASE_URL}/users/${user.id}/balance-visibility`, {
-        balance_visible: newVal ? 1 : 0,
+        balance_visible: next ? 1 : 0,
       });
-      if (setUser)
-        setUser((prev) => ({ ...prev, balance_visible: newVal ? 1 : 0 }));
+      setUser?.((p) => ({ ...p, balance_visible: next ? 1 : 0 }));
     } catch {
-      setBalanceVisible(!newVal);
+      setBalanceVisible(!next);
     }
   };
 
   const totalBalance =
-    wallets?.reduce(
-      (sum, wallet) => sum + parseFloat(wallet.coin_amount || 0),
-      0,
-    ) ?? 0;
-
+    wallets?.reduce((s, w) => s + parseFloat(w.coin_amount || 0), 0) ?? 0;
   const filtered = wallets?.filter((w) =>
     w.coin_symbol.toLowerCase().includes(searchTerm.toLowerCase()),
   );
-
-  const blurStyle = {
-    filter: balanceVisible ? "blur(0px)" : "blur(7px)",
-    transition: "filter 0.35s cubic-bezier(0.4,0,0.2,1)",
-    userSelect: balanceVisible ? "text" : "none",
-  };
+  const activeCount =
+    wallets?.filter((w) => parseFloat(w.coin_amount) > 0).length ?? 0;
 
   return (
-    <div className="min-h-screen" style={{ background: "#0a0a0f" }}>
-      <Header pageTitle="" />
+    <div
+      className="min-h-screen pb-16"
+      style={{ background: "#080810", color: "#e2e8f0" }}
+    >
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@700;900&display=swap');
+        .orb { font-family:'Orbitron',sans-serif !important; }
+        .raj { font-family:'Rajdhani',sans-serif !important; }
+        @keyframes pulse-ring { 0%{transform:scale(1);opacity:.8} 100%{transform:scale(1.6);opacity:0} }
+        @keyframes fup { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
+        .fup  { animation:fup .5s ease both; }
+        .fup2 { animation:fup .5s ease both; animation-delay:.1s; opacity:0; }
+        .fup3 { animation:fup .5s ease both; animation-delay:.2s; opacity:0; }
+        .wrow { transition:background .15s,transform .15s; }
+        .wrow:hover { background:rgba(245,158,11,0.04) !important; transform:translateX(4px); }
+        .act-btn { transition:transform .18s,box-shadow .18s; }
+        .act-btn:hover { transform:translateY(-2px); }
+        .act-btn:active { transform:scale(.95); }
+        .chip { transition:transform .2s,border-color .2s; }
+        .chip:hover { transform:translateY(-2px); border-color:rgba(245,158,11,.3) !important; }
+        input[type=search]::-webkit-search-cancel-button { display:none; }
+        ::placeholder { color:#334155; }
+      `}</style>
 
-      {/* ── Banner ── */}
-      <div
-        className="relative px-5 pt-6 pb-6 mx-4 mt-4 rounded-3xl"
-        style={{
-          zIndex: 0,
-          background:
-            "linear-gradient(135deg,#1e1b4b 0%,#312e81 40%,#4c1d95 100%)",
-          border: "1px solid rgba(139,92,246,0.25)",
-          boxShadow:
-            "0 8px 32px rgba(99,102,241,0.25), inset 0 1px 0 rgba(255,255,255,0.08)",
-        }}
-      >
-        {/* Glow blobs */}
-        <div
-          className="absolute bottom-0 left-0 w-56 h-40 rounded-full opacity-30"
-          style={{
-            background: "#6366f1",
-            filter: "blur(50px)",
-            transform: "translate(-20%,30%)",
-          }}
-        />
-        <div
-          className="absolute top-0 right-0 w-40 h-40 rounded-full opacity-20"
-          style={{
-            background: "#a78bfa",
-            filter: "blur(40px)",
-            transform: "translate(20%,-20%)",
-          }}
-        />
-        {/* Subtle grid overlay */}
-        <div
-          className="absolute inset-0 opacity-5"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(255,255,255,0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.4) 1px, transparent 1px)",
-            backgroundSize: "24px 24px",
-          }}
-        />
+      <AppNav />
 
-        <div className="relative z-10 flex items-start justify-between gap-3">
-          <div className="flex-1">
-            <p
-              className="text-violet-300 font-semibold uppercase tracking-widest mb-1"
-              style={{ fontSize: "2.6vw" }}
-            >
-              Your Portfolio
-            </p>
-            <h1
-              className="text-white font-extrabold leading-tight mb-4"
-              style={{ fontSize: "5.2vw" }}
-            >
-              Send Crypto Now
-            </h1>
-
-            {/* Balance card */}
+      <div className="px-4 md:px-8 lg:px-16 max-w-screen-xl mx-auto">
+        <div className="mt-6 fup">
+          <div
+            className="relative rounded-3xl overflow-hidden"
+            style={{
+              background: "linear-gradient(135deg,#0f1020,#0d0d1a 55%,#140f1a)",
+              border: "1px solid rgba(245,158,11,0.14)",
+            }}
+          >
             <div
-              className="rounded-2xl px-4 py-3"
+              className="absolute pointer-events-none rounded-full"
               style={{
-                background: "rgba(255,255,255,0.07)",
-                backdropFilter: "blur(12px)",
-                WebkitBackdropFilter: "blur(12px)",
-                border: "1px solid rgba(255,255,255,0.10)",
+                top: -80,
+                right: -80,
+                width: 260,
+                height: 260,
+                background:
+                  "radial-gradient(circle,rgba(245,158,11,.09),transparent 70%)",
               }}
-            >
-              <div className="flex items-center gap-1.5 mb-2">
-                <div
-                  className="rounded-full flex items-center justify-center"
-                  style={{ width: 6, height: 6, background: "#34d399" }}
-                />
-                <span
-                  className="text-violet-300 font-semibold uppercase tracking-widest"
-                  style={{ fontSize: "2.6vw" }}
-                >
-                  Total Balance
-                </span>
-                <button
-                  onClick={toggleBalance}
-                  aria-label={balanceVisible ? "Hide balance" : "Show balance"}
-                  style={{
-                    background: "rgba(139,92,246,0.25)",
-                    border: "1px solid rgba(139,92,246,0.3)",
-                    borderRadius: "50%",
-                    width: 24,
-                    height: 24,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    cursor: "pointer",
-                    flexShrink: 0,
-                    padding: 0,
-                    transition: "all 0.2s",
-                    marginLeft: "auto",
-                  }}
-                >
-                  {balanceVisible ? (
-                    <svg
-                      width="11"
-                      height="11"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="#a78bfa"
-                      strokeWidth="2.2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                      <circle cx="12" cy="12" r="3" />
-                    </svg>
-                  ) : (
-                    <svg
-                      width="11"
-                      height="11"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="#a78bfa"
-                      strokeWidth="2.2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94" />
-                      <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19" />
-                      <line x1="1" y1="1" x2="23" y2="23" />
-                    </svg>
-                  )}
-                </button>
-              </div>
+            />
+            <div
+              className="absolute pointer-events-none rounded-full"
+              style={{
+                bottom: -60,
+                left: -60,
+                width: 200,
+                height: 200,
+                background:
+                  "radial-gradient(circle,rgba(249,115,22,.06),transparent 70%)",
+              }}
+            />
 
-              <p
-                className="text-white font-extrabold leading-none select-none"
-                style={{
-                  fontSize: "1.35rem",
-                  letterSpacing: "-0.03em",
-                  ...blurStyle,
-                }}
-              >
-                ${totalBalance.toFixed(2)}
-                <span
-                  className="text-violet-300 font-semibold ml-1"
-                  style={{ fontSize: "3vw" }}
-                >
-                  USDT
-                </span>
-              </p>
+            <div
+              className="absolute top-0 inset-x-0 h-px"
+              style={{
+                background:
+                  "linear-gradient(90deg,transparent,#f59e0b,#f97316,transparent)",
+              }}
+            />
 
-              <div className="flex items-center justify-between mt-2">
-                <p className="text-violet-400" style={{ fontSize: "2.8vw" }}>
-                  {wallets?.length ?? 0} wallet
-                  {wallets?.length !== 1 ? "s" : ""}
-                </p>
-                <div
-                  className="rounded-full px-2 py-0.5 flex items-center gap-1"
-                  style={{
-                    background: "rgba(52,211,153,0.12)",
-                    border: "1px solid rgba(52,211,153,0.2)",
-                  }}
-                >
+            <div className="relative z-10 p-6 md:p-8 lg:p-10">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
+                <div className="flex-1 min-w-0">
+                  <p
+                    className="raj text-xs font-bold tracking-widest uppercase mb-3"
+                    style={{ color: "#475569" }}
+                  >
+                    Total Portfolio Value
+                  </p>
+
                   <div
+                    className="flex items-baseline gap-2.5 mb-4"
                     style={{
-                      width: 4,
-                      height: 4,
-                      borderRadius: "50%",
-                      background: "#34d399",
-                    }}
-                  />
-                  <span
-                    style={{
-                      color: "#34d399",
-                      fontSize: "2.4vw",
-                      fontWeight: 600,
+                      filter: balanceVisible ? "none" : "blur(12px)",
+                      transition: "filter .3s",
+                      userSelect: balanceVisible ? "text" : "none",
                     }}
                   >
-                    Active
-                  </span>
+                    <span
+                      className="orb font-black"
+                      style={{
+                        fontSize: "clamp(34px,7vw,58px)",
+                        color: "#f1f5f9",
+                        lineHeight: 1,
+                      }}
+                    >
+                      ${totalBalance.toFixed(2)}
+                    </span>
+                    <span
+                      className="raj font-bold text-lg"
+                      style={{ color: "#475569" }}
+                    >
+                      USDT
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <div className="relative w-2 h-2 flex-shrink-0">
+                        <div
+                          className="absolute inset-0 rounded-full"
+                          style={{
+                            background: "#10b981",
+                            animation: "pulse-ring 2s ease-out infinite",
+                          }}
+                        />
+                        <div
+                          className="w-2 h-2 rounded-full"
+                          style={{ background: "#10b981" }}
+                        />
+                      </div>
+                      <span
+                        className="raj font-bold text-xs tracking-widest uppercase"
+                        style={{ color: "#10b981" }}
+                      >
+                        Live Balance
+                      </span>
+                    </div>
+                    <button
+                      onClick={toggleBalance}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-none cursor-pointer raj font-semibold text-xs tracking-wide act-btn"
+                      style={{
+                        background: "rgba(255,255,255,0.05)",
+                        border: "1px solid rgba(255,255,255,0.08)",
+                        color: "#64748b",
+                      }}
+                    >
+                      {balanceVisible ? <EyeOpen /> : <EyeOff />}
+                      {balanceVisible ? "Hide" : "Show"}
+                    </button>
+                    {user?.name && (
+                      <span
+                        className="raj text-xs font-medium"
+                        style={{ color: "#334155" }}
+                      >
+                        · {user.name}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-4 lg:items-end">
+                  <div className="flex gap-3">
+                    {[
+                      {
+                        lbl: "Wallets",
+                        val: wallets?.length ?? 0,
+                        color: "#f59e0b",
+                      },
+                      { lbl: "Active", val: activeCount, color: "#10b981" },
+                      {
+                        lbl: "Currency",
+                        val: `${wallets?.length ?? 0}`,
+                        color: "#3b82f6",
+                      },
+                    ].map((s) => (
+                      <div
+                        key={s.lbl}
+                        className="chip rounded-2xl px-4 py-3 text-center flex-1 lg:flex-none"
+                        style={{
+                          background: "rgba(255,255,255,0.03)",
+                          border: "1px solid rgba(255,255,255,0.07)",
+                          minWidth: 80,
+                        }}
+                      >
+                        <p
+                          className="orb font-black"
+                          style={{
+                            fontSize: "clamp(15px,4vw,22px)",
+                            color: s.color,
+                          }}
+                        >
+                          {s.val}
+                        </p>
+                        <p
+                          className="raj font-semibold text-xs mt-0.5"
+                          style={{ color: "#334155" }}
+                        >
+                          {s.lbl}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Wallet Icon */}
-          <div
-            className="flex-shrink-0 flex items-center justify-center rounded-2xl"
-            style={{
-              width: "18vw",
-              height: "18vw",
-              maxWidth: 72,
-              maxHeight: 72,
-              background:
-                "linear-gradient(135deg, rgba(139,92,246,0.35) 0%, rgba(99,102,241,0.2) 100%)",
-              border: "1px solid rgba(139,92,246,0.4)",
-              boxShadow:
-                "0 4px 24px rgba(99,102,241,0.3), inset 0 1px 0 rgba(255,255,255,0.1)",
-              backdropFilter: "blur(8px)",
-            }}
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill="url(#walletGrad)"
+        {/* ════════════ WALLET TABLE ════════════ */}
+        <div className="mt-8 fup2">
+          {/* Header row */}
+          <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+            <div className="flex items-center gap-2.5">
+              <div
+                className="w-0.5 h-5 rounded-full"
+                style={{
+                  background: "linear-gradient(to bottom,#f59e0b,#f97316)",
+                }}
+              />
+              <span
+                className="font-black tracking-wider orb"
+                style={{ fontSize: "clamp(13px,3.5vw,16px)", color: "#f1f5f9" }}
+              >
+                My Wallets
+              </span>
+              {wallets?.length > 0 && (
+                <span
+                  className="raj font-bold text-xs px-2.5 py-1 rounded-full"
+                  style={{
+                    background: "rgba(245,158,11,0.1)",
+                    border: "1px solid rgba(245,158,11,0.2)",
+                    color: "#f59e0b",
+                  }}
+                >
+                  {wallets.length}
+                </span>
+              )}
+            </div>
+
+            {/* Search */}
+            <div
+              className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl"
               style={{
-                width: "10vw",
-                height: "10vw",
-                maxWidth: 40,
-                maxHeight: 40,
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.07)",
+                minWidth: 200,
               }}
             >
-              <defs>
-                <linearGradient
-                  id="walletGrad"
-                  x1="0%"
-                  y1="0%"
-                  x2="100%"
-                  y2="100%"
-                >
-                  <stop offset="0%" stopColor="#c4b5fd" />
-                  <stop offset="100%" stopColor="#818cf8" />
-                </linearGradient>
-              </defs>
-              <path d="M2 7a2 2 0 012-2h16a2 2 0 012 2v1H2V7zm0 3h20v9a2 2 0 01-2 2H4a2 2 0 01-2-2v-9zm13 3a1 1 0 000 2h2a1 1 0 000-2h-2z" />
-            </svg>
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                <circle
+                  cx="7"
+                  cy="7"
+                  r="5"
+                  stroke="#334155"
+                  strokeWidth="1.5"
+                />
+                <path
+                  d="M11 11l3 3"
+                  stroke="#334155"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+              </svg>
+              <input
+                type="search"
+                placeholder="Search coin..."
+                className="bg-transparent outline-none raj font-semibold text-sm flex-1"
+                style={{ color: "#f1f5f9", caretColor: "#f59e0b" }}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
           </div>
-        </div>
-      </div>
 
-      {/* ── Select + Search ── */}
-      <div className="px-4 py-4 flex items-center gap-3">
-        <h2
-          className="font-extrabold whitespace-nowrap"
-          style={{ color: "#f1f5f9", fontSize: "4.5vw" }}
-        >
-          Select a wallet
-        </h2>
-        <div
-          className="flex-1 flex items-center gap-2 rounded-2xl px-3 py-2.5"
-          style={{
-            background: "rgba(255,255,255,0.06)",
-            border: "1px solid rgba(255,255,255,0.07)",
-          }}
-        >
-          <svg
-            width="15"
-            height="15"
-            viewBox="0 0 16 16"
-            fill="none"
-            className="flex-shrink-0"
-          >
-            <circle cx="7" cy="7" r="5" stroke="#475569" strokeWidth="1.5" />
-            <path
-              d="M11 11l3 3"
-              stroke="#475569"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-            />
-          </svg>
-          <input
-            type="search"
-            placeholder="Search"
-            className="flex-1 bg-transparent outline-none"
-            style={{ color: "#f1f5f9", fontSize: "3.8vw" }}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-      </div>
-
-      {/* ── Wallet list ── */}
-      <div
-        className="px-4 mx-4 rounded-3xl overflow-hidden"
-        style={{
-          background: "rgba(255,255,255,0.04)",
-          border: "1px solid rgba(255,255,255,0.07)",
-        }}
-      >
-        {filtered?.map((wallet, idx) => (
-          <Link
-            key={wallet.id}
-            to="/funds"
-            state={{ wallet, coinAmount: coinValues[wallet.coin_id] }}
-            className="flex items-center justify-between py-4 no-underline"
+          {/* Table shell */}
+          <div
+            className="rounded-3xl overflow-hidden"
             style={{
-              borderBottom:
-                idx < filtered.length - 1
-                  ? "1px solid rgba(255,255,255,0.06)"
-                  : "none",
+              background: "#0a0a14",
+              border: "1px solid rgba(255,255,255,0.06)",
             }}
           >
-            {/* Left: logo + name */}
-            <div className="flex items-center gap-3">
-              <div className="relative flex-shrink-0">
-                <img
-                  className="rounded-full object-contain bg-white"
-                  style={{
-                    width: "10vw",
-                    height: "10vw",
-                    maxWidth: 40,
-                    maxHeight: 40,
-                  }}
-                  src={resolveLogoSrc(wallet)}
-                  alt={wallet.coin_symbol}
-                  onError={(e) => {
-                    e.target.style.display = "none";
-                    e.target.nextSibling.style.display = "flex";
-                  }}
-                />
-                {/* Initials fallback */}
+            {/* Column headers — desktop only */}
+            <div
+              className="hidden md:grid grid-cols-12 px-6 py-3"
+              style={{
+                borderBottom: "1px solid rgba(255,255,255,0.05)",
+                background: "rgba(255,255,255,0.02)",
+              }}
+            >
+              <span
+                className="col-span-5 raj font-bold text-xs tracking-widest uppercase"
+                style={{ color: "#334155" }}
+              >
+                Asset
+              </span>
+              <span
+                className="col-span-3 text-right raj font-bold text-xs tracking-widest uppercase"
+                style={{ color: "#334155" }}
+              >
+                Balance (USDT)
+              </span>
+              <span
+                className="col-span-3 text-right raj font-bold text-xs tracking-widest uppercase"
+                style={{ color: "#334155" }}
+              >
+                Coin Amount
+              </span>
+              <span className="col-span-1" />
+            </div>
+
+            {/* Rows */}
+            {filtered?.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 gap-3">
                 <div
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center"
                   style={{
-                    display: "none",
-                    width: "10vw",
-                    height: "10vw",
-                    maxWidth: 40,
-                    maxHeight: 40,
-                    borderRadius: "50%",
-                    background: "rgba(139,92,246,0.25)",
-                    border: "1px solid rgba(139,92,246,0.4)",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "#a78bfa",
-                    fontWeight: 700,
-                    fontSize: "3vw",
+                    background: "rgba(255,255,255,0.03)",
+                    border: "1px solid rgba(255,255,255,0.06)",
                   }}
                 >
-                  {wallet.coin_symbol?.slice(0, 2)}
-                </div>
-              </div>
-
-              <div>
-                {/* Coin name + bluetick inline */}
-                <div className="flex items-center gap-1 leading-tight">
-                  <p
-                    className="font-bold"
-                    style={{
-                      color: "#f1f5f9",
-                      fontSize: "3.8vw",
-                      lineHeight: 1.2,
-                    }}
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#1e293b"
+                    strokeWidth="1.5"
                   >
-                    {wallet.coin_symbol} Wallet
-                  </p>
-                  {/* ── Bluetick verified badge ── */}
-                  <VerifiedBadge />
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="M21 21l-4.35-4.35" strokeLinecap="round" />
+                  </svg>
                 </div>
                 <p
-                  className="mt-0.5"
-                  style={{ color: "#64748b", fontSize: "3.2vw" }}
+                  className="raj font-semibold text-sm"
+                  style={{ color: "#334155" }}
                 >
-                  {wallet.coin_name}
+                  No wallets match your search
                 </p>
               </div>
-            </div>
+            ) : (
+              filtered?.map((wallet, idx) => (
+                <Link
+                  key={wallet.id}
+                  to="/funds"
+                  state={{ wallet, coinAmount: coinValues[wallet.coin_id] }}
+                  className="wrow flex md:grid md:grid-cols-12 items-center px-5 md:px-6 py-4 md:py-5 no-underline gap-4 md:gap-0"
+                  style={{
+                    borderBottom:
+                      idx < filtered.length - 1
+                        ? "1px solid rgba(255,255,255,0.04)"
+                        : "none",
+                  }}
+                >
+                  {/* Asset */}
+                  <div className="flex items-center gap-3.5 md:col-span-5 flex-1 min-w-0">
+                    <div className="relative flex-shrink-0">
+                      <div
+                        className="absolute inset-0 rounded-full pointer-events-none"
+                        style={{
+                          background: "rgba(245,158,11,0.1)",
+                          transform: "scale(1.3)",
+                          filter: "blur(5px)",
+                        }}
+                      />
+                      <img
+                        className="relative rounded-full object-contain"
+                        style={{
+                          width: 44,
+                          height: 44,
+                          background: "white",
+                          padding: 3,
+                          flexShrink: 0,
+                        }}
+                        src={resolveLogoSrc(wallet)}
+                        alt={wallet.coin_symbol}
+                        onError={(e) => {
+                          e.target.style.display = "none";
+                          e.target.nextSibling.style.display = "flex";
+                        }}
+                      />
+                      <div
+                        style={{
+                          display: "none",
+                          width: 44,
+                          height: 44,
+                          borderRadius: "50%",
+                          background: "rgba(245,158,11,0.1)",
+                          border: "1px solid rgba(245,158,11,0.2)",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "#f59e0b",
+                          fontWeight: 700,
+                          fontSize: 13,
+                          fontFamily: "'Orbitron',sans-serif",
+                        }}
+                      >
+                        {wallet.coin_symbol?.slice(0, 2)}
+                      </div>
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <span
+                          className="raj font-bold truncate"
+                          style={{ color: "#f1f5f9", fontSize: 15 }}
+                        >
+                          {wallet.coin_symbol}
+                        </span>
+                        <MdVerified
+                          size={13}
+                          style={{ color: "#1877F2", flexShrink: 0 }}
+                        />
+                      </div>
+                      <p
+                        className="raj font-medium text-xs truncate"
+                        style={{ color: "#475569" }}
+                      >
+                        {wallet.coin_name}
+                      </p>
+                    </div>
+                  </div>
 
-            {/* Right: balance */}
-            <div className="text-right">
-              <p
-                className="font-semibold"
-                style={{ color: "#f1f5f9", fontSize: "3.8vw" }}
-              >
-                {balanceVisible
-                  ? `$${parseFloat(wallet.coin_amount || 0).toFixed(4)}`
-                  : "$****"}
-              </p>
-              <p
-                className="mt-0.5"
-                style={{ color: "#64748b", fontSize: "3.2vw" }}
-              >
-                {balanceVisible
-                  ? `${coinValues[wallet.coin_id] !== undefined ? coinValues[wallet.coin_id] : "0.0000"} ${wallet.coin_symbol}`
-                  : `**** ${wallet.coin_symbol}`}
-              </p>
-            </div>
-          </Link>
-        ))}
+                  {/* Balance USDT */}
+                  <div className="md:col-span-3 md:text-right flex-shrink-0">
+                    <p
+                      className="raj font-bold"
+                      style={{ color: "#f1f5f9", fontSize: 15 }}
+                    >
+                      {balanceVisible
+                        ? `$${parseFloat(wallet.coin_amount || 0).toFixed(4)}`
+                        : "$••••"}
+                    </p>
+                    <p
+                      className="raj font-medium text-xs md:hidden"
+                      style={{ color: "#475569" }}
+                    >
+                      USDT Balance
+                    </p>
+                  </div>
 
-        {/* Empty state */}
-        {filtered?.length === 0 && (
-          <div
-            className="flex flex-col items-center justify-center py-10 gap-2"
-            style={{ color: "#475569" }}
-          >
-            <svg
-              width="28"
-              height="28"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#334155"
-              strokeWidth="1.5"
-            >
-              <circle cx="11" cy="11" r="8" />
-              <path d="M21 21l-4.35-4.35" strokeLinecap="round" />
-            </svg>
-            <p style={{ fontSize: "3.4vw" }}>No wallets match your search</p>
+                  {/* Coin amount — desktop column, mobile hidden */}
+                  <div className="hidden md:block md:col-span-3 text-right">
+                    <p
+                      className="raj font-medium"
+                      style={{ color: "#64748b", fontSize: 14 }}
+                    >
+                      {balanceVisible
+                        ? `${coinValues[wallet.coin_id] !== undefined ? coinValues[wallet.coin_id] : "0.0000"} ${wallet.coin_symbol}`
+                        : `•••• ${wallet.coin_symbol}`}
+                    </p>
+                  </div>
+
+                  {/* Arrow */}
+                  <div className="md:col-span-1 flex justify-end">
+                    <div
+                      className="w-8 h-8 rounded-lg flex items-center justify-center"
+                      style={{
+                        background: "rgba(245,158,11,0.06)",
+                        border: "1px solid rgba(245,158,11,0.1)",
+                      }}
+                    >
+                      <svg
+                        width="13"
+                        height="13"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                      >
+                        <path
+                          d="M9 18l6-6-6-6"
+                          stroke="#f59e0b"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                </Link>
+              ))
+            )}
           </div>
-        )}
-      </div>
+        </div>
 
-      {/* bottom spacing */}
-      <div className="h-8" />
+        {/* ════════════ SUPPORT BANNER ════════════ */}
+        <div className="mt-8 mb-4 fup3">
+          <div
+            className="rounded-2xl px-5 py-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+            style={{
+              background: "rgba(245,158,11,.04)",
+              border: "1px solid rgba(245,158,11,.1)",
+            }}
+          >
+            <div>
+              <p className="orb font-black text-sm text-white mb-1">
+                Need Help?
+              </p>
+              <p
+                className="raj font-medium text-xs"
+                style={{ color: "#475569" }}
+              >
+                24/7 support via Live Chat · WhatsApp · Telegram
+              </p>
+            </div>
+            <button
+              onClick={() => navigate("/live-chat")}
+              className="act-btn flex items-center gap-2 px-5 py-3 rounded-xl font-black text-xs border-none cursor-pointer raj flex-shrink-0"
+              style={{
+                background: "linear-gradient(135deg,#f59e0b,#f97316)",
+                color: "#080810",
+                letterSpacing: 2,
+              }}
+            >
+              CONTACT US
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

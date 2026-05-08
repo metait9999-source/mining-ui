@@ -11,7 +11,7 @@ import { GiMining } from "react-icons/gi";
 import { TbChartBar } from "react-icons/tb";
 import { FaInfoCircle } from "react-icons/fa";
 
-const appName = "Trust Pro";
+const appName = "CRYPTOMINE";
 
 const navItems = [
   {
@@ -19,127 +19,98 @@ const navItems = [
     to: "/account",
     iconBg: "linear-gradient(135deg,#f59e0b,#f97316)",
     reactIcon: <BiWallet />,
-    reactIconStyle: { fontSize: 22, color: "#fff" },
+    reactIconStyle: { fontSize: 20, color: "#fff" },
   },
   {
     label: "Trade",
     to: "/",
     iconBg: "linear-gradient(135deg,#10b981,#059669)",
     icon: "/assets/images/menu/trade.png",
-    iconStyle: { width: 40, height: 40 },
   },
   {
     label: "Arbitrage",
     to: "/arbitrage",
     iconBg: "linear-gradient(135deg,#3b82f6,#6366f1)",
     reactIcon: <MdOutlineShowChart />,
-    reactIconStyle: { fontSize: 22, color: "#fff" },
+    reactIconStyle: { fontSize: 20, color: "#fff" },
   },
   {
     label: "Mining",
     to: "/mining",
-    iconBg: "linear-gradient(135deg,#8b5cf6,#7c3aed)",
+    iconBg: "linear-gradient(135deg,#f59e0b,#f97316)",
     reactIcon: <GiMining />,
-    reactIconStyle: { fontSize: 20, color: "#fff" },
+    reactIconStyle: { fontSize: 18, color: "#fff" },
   },
   {
     label: "Help Loan",
     to: "/loan-landing",
-    icon: "/assets/images/menu/loan.png",
     iconBg: "linear-gradient(135deg,#f97316,#ef4444)",
-    iconStyle: { width: 30, height: 28 },
+    icon: "/assets/images/menu/loan.png",
   },
   {
     label: "Profit Statistics",
     to: "/profit-stat",
     iconBg: "linear-gradient(135deg,#14b8a6,#0891b2)",
     reactIcon: <TbChartBar />,
-    reactIconStyle: { fontSize: 22, color: "#fff" },
+    reactIconStyle: { fontSize: 20, color: "#fff" },
   },
-
   {
     label: "Transaction",
     to: "/transaction",
-    icon: "/assets/images/menu/transaction.png",
     iconBg: "linear-gradient(135deg,#f97316,#ef4444)",
-    iconStyle: { width: 22, height: 22 },
+    icon: "/assets/images/menu/transaction.png",
   },
   {
     label: "About Us",
     to: "/about",
     iconBg: "linear-gradient(135deg,#14b8a6,#0891b2)",
     reactIcon: <FaInfoCircle />,
-    reactIconStyle: { fontSize: 22, color: "#fff" },
+    reactIconStyle: { fontSize: 18, color: "#fff" },
   },
 ];
 
-const DEFAULT_ICON_BG = "linear-gradient(135deg,#6366f1,#a855f7)";
-
-/* ══════════════════════════════════════════════
-   NAV ICON — renders react icon OR <img>
-══════════════════════════════════════════════ */
-const NavIcon = ({
-  reactIcon,
-  reactIconStyle,
-  icon,
-  iconStyle,
-  iconBg,
-  alt,
-}) => (
+const NavIcon = ({ reactIcon, reactIconStyle, icon, iconBg }) => (
   <div
-    className="w-10 h-10 rounded-2xl flex items-center justify-center shadow-sm flex-shrink-0"
-    style={{ background: iconBg || DEFAULT_ICON_BG }}
+    className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+    style={{ background: iconBg || "linear-gradient(135deg,#f59e0b,#f97316)" }}
   >
     {reactIcon ? (
       <span
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          ...(reactIconStyle || {}),
-        }}
+        className="flex items-center justify-center"
+        style={reactIconStyle || {}}
       >
         {reactIcon}
       </span>
     ) : (
       <img
         src={icon}
-        alt={alt}
+        alt=""
         className="object-contain brightness-0 invert"
-        style={{ width: 20, height: 20, ...(iconStyle || {}) }}
+        style={{ width: 18, height: 18 }}
       />
     )}
   </div>
 );
 
-/* ══════════════════════════════════════════════
-   SETTINGS ITEM
-══════════════════════════════════════════════ */
 const SettingsItem = ({ gradient, icon, label, sublabel, onClick, to }) => {
-  const content = (
+  const inner = (
     <div
-      className="flex items-center justify-between px-5 py-4 transition-colors"
+      className="flex items-center justify-between px-5 py-4 cursor-pointer transition-colors duration-150 hover:bg-white/5"
       style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}
-      onMouseEnter={(e) =>
-        (e.currentTarget.style.background = "rgba(255,255,255,0.06)")
-      }
-      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
     >
       <div className="flex items-center gap-3">
         <div
-          className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+          className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
           style={{ background: gradient }}
         >
           {icon}
         </div>
         <div>
-          <p
-            style={{ color: "#f1f5f9", fontWeight: 600, fontSize: "0.875rem" }}
-          >
+          <p className="text-sm font-semibold" style={{ color: "#f1f5f9" }}>
             {label}
           </p>
           {sublabel && (
-            <p style={{ color: "#64748b", fontSize: "0.75rem", marginTop: 2 }}>
+            <p className="text-xs mt-0.5" style={{ color: "#64748b" }}>
               {sublabel}
             </p>
           )}
@@ -157,26 +128,20 @@ const SettingsItem = ({ gradient, icon, label, sublabel, onClick, to }) => {
       </svg>
     </div>
   );
-
   return to ? (
-    <Link
-      to={to}
-      onClick={onClick}
-      className="block"
-      style={{ textDecoration: "none" }}
-    >
-      {content}
+    <Link to={to} onClick={onClick} className="block no-underline">
+      {inner}
     </Link>
   ) : (
-    <button className="w-full text-left" onClick={onClick}>
-      {content}
+    <button
+      className="w-full text-left bg-transparent border-none p-0"
+      onClick={onClick}
+    >
+      {inner}
     </button>
   );
 };
 
-/* ══════════════════════════════════════════════
-   MAIN SIDENAV
-══════════════════════════════════════════════ */
 const SideNav = ({ toggleMenu, setToggleMenu }) => {
   const { settings } = useSettings();
   const smartContractLink = settings?.smart_contract_link || "#";
@@ -190,133 +155,146 @@ const SideNav = ({ toggleMenu, setToggleMenu }) => {
     () => user?.balance_visible === 1 || user?.balance_visible === true,
   );
 
-  const toggleSettingsPopup = () => setSettingsVisible((v) => !v);
-
   const closeAll = () => {
     setSettingsVisible(false);
     setToggleMenu(false);
   };
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
+    const handler = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target))
         setToggleMenu(false);
-      }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, [setToggleMenu]);
 
   const toggleBalance = async () => {
-    const newVal = !balanceVisible;
-    setBalanceVisible(newVal);
+    const next = !balanceVisible;
+    setBalanceVisible(next);
     try {
       await axios.put(`${API_BASE_URL}/users/${user.id}/balance-visibility`, {
-        balance_visible: newVal ? 1 : 0,
+        balance_visible: next ? 1 : 0,
       });
-      if (setUser)
-        setUser((prev) => ({ ...prev, balance_visible: newVal ? 1 : 0 }));
+      setUser?.((p) => ({ ...p, balance_visible: next ? 1 : 0 }));
     } catch {
-      setBalanceVisible(!newVal);
+      setBalanceVisible(!next);
     }
   };
 
   const totalBalance =
-    wallets?.reduce(
-      (sum, wallet) => sum + parseFloat(wallet.coin_amount || 0),
-      0,
-    ) ?? 0;
-
-  const blurStyle = {
-    filter: balanceVisible ? "blur(0px)" : "blur(7px)",
-    transition: "filter 0.35s cubic-bezier(0.4,0,0.2,1)",
-    userSelect: balanceVisible ? "text" : "none",
-  };
-
-  const DRAWER_BG = "#0a0a0f";
-  const DRAWER_BORDER = "rgba(255,255,255,0.07)";
-  const SECTION_LABEL = "#475569";
-  const NAV_TEXT = "#cbd5e1";
-  const NAV_HOVER_BG = "rgba(255,255,255,0.06)";
-  const SHEET_BG = "#111118";
+    wallets?.reduce((sum, w) => sum + parseFloat(w.coin_amount || 0), 0) ?? 0;
 
   return (
     <>
       {/* ── Main Drawer ── */}
       {toggleMenu && (
         <div className="fixed inset-0 z-[2016] flex">
+          {/* Backdrop */}
           <div
             className="absolute inset-0"
             style={{
-              background: "rgba(0,0,0,0.7)",
+              background: "rgba(0,0,0,0.75)",
               backdropFilter: "blur(6px)",
             }}
             onClick={() => setToggleMenu(false)}
           />
 
+          {/* Drawer */}
           <div
             ref={menuRef}
-            className="relative w-[80%] max-w-sm h-full overflow-y-auto shadow-2xl flex flex-col"
+            className="relative flex flex-col h-full overflow-y-auto shadow-2xl"
             style={{
+              width: "min(320px,85%)",
               zIndex: 2016,
-              background: DRAWER_BG,
-              borderRight: `1px solid ${DRAWER_BORDER}`,
+              background: "#0a0a0f",
+              borderRight: "1px solid rgba(245,158,11,0.1)",
             }}
           >
+            {/* Top accent */}
+            <div
+              className="absolute top-0 left-0 right-0 h-0.5"
+              style={{
+                background:
+                  "linear-gradient(90deg,#f59e0b,#f97316,transparent)",
+              }}
+            />
+
             {/* Header */}
             <div
-              className="px-5 pt-6 pb-4"
-              style={{ borderBottom: `1px solid ${DRAWER_BORDER}` }}
+              className="px-5 pt-8 pb-5"
+              style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
             >
-              <div className="flex items-center justify-between mb-3">
-                <h1
-                  className="text-2xl font-black tracking-tight"
-                  style={{
-                    background: "linear-gradient(90deg,#a78bfa,#60a5fa)",
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                  }}
-                >
-                  {appName}
-                </h1>
-                <div
-                  className="!text-white text-sm font-semibold px-3 py-1 rounded-full shadow"
-                  style={{
-                    background: "linear-gradient(90deg,#7c3aed,#6366f1)",
-                  }}
-                >
-                  UID: {user?.uuid || "—"}
+              {/* Logo row */}
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-2.5">
+                  <div
+                    className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                    style={{
+                      background: "linear-gradient(135deg,#f59e0b,#f97316)",
+                    }}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                      <path d="M12 2L2 7l10 5 10-5-10-5z" fill="#080810" />
+                      <path
+                        d="M2 17l10 5 10-5M2 12l10 5 10-5"
+                        stroke="#080810"
+                        strokeWidth="2.2"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
+                  <span
+                    className="font-black tracking-widest text-sm"
+                    style={{
+                      fontFamily: "'Orbitron',sans-serif",
+                      color: "#f59e0b",
+                    }}
+                  >
+                    {appName}
+                  </span>
                 </div>
+
+                {/* UID badge */}
+                <span
+                  className="text-xs font-bold px-2.5 py-1 rounded-full"
+                  style={{
+                    background: "rgba(245,158,11,0.1)",
+                    border: "1px solid rgba(245,158,11,0.25)",
+                    color: "#f59e0b",
+                  }}
+                >
+                  {user?.uuid ? `#${user.uuid}` : "—"}
+                </span>
               </div>
 
-              {/* <p
+              {/* Balance */}
+              <div
+                className="rounded-2xl px-4 py-4"
                 style={{
-                  color: SECTION_LABEL,
-                  fontSize: "0.8rem",
-                  fontWeight: 500,
+                  background: "rgba(245,158,11,0.05)",
+                  border: "1px solid rgba(245,158,11,0.12)",
                 }}
               >
-                UID: {user?.uuid || "—"}
-              </p> */}
-
-              {/* Balance */}
-              <div className="mt-4">
-                <div className="flex items-center gap-1 mb-1">
+                <div className="flex items-center justify-between mb-1">
+                  <span
+                    className="text-xs font-bold tracking-widest uppercase"
+                    style={{ color: "#64748b" }}
+                  >
+                    Main Wallet
+                  </span>
                   <button
                     onClick={toggleBalance}
-                    aria-label={
-                      balanceVisible ? "Hide balance" : "Show balance"
-                    }
-                    className="flex items-center justify-center p-0 bg-transparent border-none cursor-pointer"
-                    style={{ lineHeight: 1 }}
+                    className="flex items-center justify-center bg-transparent border-none cursor-pointer p-0"
+                    style={{ color: "#64748b" }}
                   >
                     {balanceVisible ? (
                       <svg
-                        width="18"
-                        height="18"
+                        width="16"
+                        height="16"
                         viewBox="0 0 24 24"
                         fill="none"
-                        stroke="white"
+                        stroke="currentColor"
                         strokeWidth="2"
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -326,100 +304,57 @@ const SideNav = ({ toggleMenu, setToggleMenu }) => {
                       </svg>
                     ) : (
                       <svg
-                        width="18"
-                        height="18"
+                        width="16"
+                        height="16"
                         viewBox="0 0 24 24"
                         fill="none"
-                        stroke="white"
+                        stroke="currentColor"
                         strokeWidth="2"
                         strokeLinecap="round"
                         strokeLinejoin="round"
                       >
-                        <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94" />
-                        <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19" />
-                        <line x1="1" y1="1" x2="23" y2="23" />
+                        <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24M1 1l22 22" />
                       </svg>
                     )}
                   </button>
-
-                  <div
-                    // to="/account"
-                    // onClick={() => setToggleMenu(false)}
-                    className="flex items-center gap-0.5"
-                    style={{ textDecoration: "none" }}
-                  >
-                    <span
-                      style={{
-                        color: "white",
-                        fontSize: "0.9rem",
-                        fontWeight: 700,
-                      }}
-                    >
-                      Main Wallet
-                    </span>
-                    <svg
-                      width="12"
-                      height="12"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="white"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M6 9l6 6 6-6" />
-                    </svg>
-                  </div>
                 </div>
-
                 <p
-                  className="font-bold leading-none select-none flex items-center -ml-1"
+                  className="font-black flex items-center"
                   style={{
-                    fontSize: "1.1rem",
-                    letterSpacing: "-0.03em",
+                    fontSize: "1.4rem",
                     color: "#f1f5f9",
-                    ...blurStyle,
+                    filter: balanceVisible ? "blur(0)" : "blur(8px)",
+                    transition: "filter 0.3s",
+                    userSelect: balanceVisible ? "text" : "none",
+                    fontFamily: "'Orbitron',sans-serif",
                   }}
                 >
-                  <BiDollar size={26} />
+                  <BiDollar size={24} style={{ color: "#f59e0b" }} />
                   {totalBalance.toFixed(2)}
                 </p>
               </div>
             </div>
 
-            {/* Functions */}
-            <div className="px-5 pt-5 pb-4 flex-1">
-              <h2
-                className="font-bold mb-3"
-                style={{
-                  color: SECTION_LABEL,
-                  textTransform: "uppercase",
-                  fontSize: "0.7rem",
-                  letterSpacing: "0.1em",
-                }}
+            {/* Nav items */}
+            <div className="px-3 py-4 flex-1">
+              <p
+                className="px-3 mb-2 text-xs font-bold tracking-widest uppercase"
+                style={{ color: "#334155" }}
               >
-                Functions
-              </h2>
-
+                Navigation
+              </p>
               <nav className="space-y-0.5">
                 {navItems.map(
-                  ({
-                    label,
-                    icon,
-                    iconStyle,
-                    iconBg,
-                    to,
-                    reactIcon,
-                    reactIconStyle,
-                  }) => (
+                  ({ label, icon, iconBg, to, reactIcon, reactIconStyle }) => (
                     <Link
                       key={label}
                       to={to}
                       onClick={() => setToggleMenu(false)}
-                      className="flex items-center gap-4 px-3 py-3 rounded-2xl transition-colors"
+                      className="flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-150 no-underline group"
                       style={{ textDecoration: "none" }}
                       onMouseEnter={(e) =>
-                        (e.currentTarget.style.background = NAV_HOVER_BG)
+                        (e.currentTarget.style.background =
+                          "rgba(245,158,11,0.06)")
                       }
                       onMouseLeave={(e) =>
                         (e.currentTarget.style.background = "transparent")
@@ -429,16 +364,11 @@ const SideNav = ({ toggleMenu, setToggleMenu }) => {
                         reactIcon={reactIcon}
                         reactIconStyle={reactIconStyle}
                         icon={icon}
-                        iconStyle={iconStyle}
                         iconBg={iconBg}
-                        alt={label}
                       />
                       <span
-                        style={{
-                          color: NAV_TEXT,
-                          fontWeight: 500,
-                          fontSize: "0.9rem",
-                        }}
+                        className="text-sm font-semibold"
+                        style={{ color: "#cbd5e1" }}
                       >
                         {label}
                       </span>
@@ -448,53 +378,65 @@ const SideNav = ({ toggleMenu, setToggleMenu }) => {
 
                 {/* Settings */}
                 <button
-                  onClick={toggleSettingsPopup}
-                  className="w-full flex items-center gap-4 px-3 py-3 rounded-2xl transition-colors"
-                  style={{ background: "transparent" }}
+                  onClick={() => setSettingsVisible(true)}
+                  className="w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-150 bg-transparent border-none cursor-pointer text-left"
                   onMouseEnter={(e) =>
-                    (e.currentTarget.style.background = NAV_HOVER_BG)
-                  }
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.background = "transparent")
-                  }
-                >
-                  <NavIcon
-                    icon="/assets/images/menu/settings.png"
-                    iconBg="linear-gradient(135deg,#475569,#334155)"
-                    alt="Settings"
-                  />
-                  <span
-                    style={{
-                      color: NAV_TEXT,
-                      fontWeight: 500,
-                      fontSize: "0.9rem",
-                    }}
-                  >
-                    Settings
-                  </span>
-                </button>
-
-                {/* Join Smart Contract */}
-                <a
-                  href={smartContractLink}
-                  onClick={() => setToggleMenu(false)}
-                  className="flex items-center gap-4 px-3 py-3 rounded-2xl transition-colors"
-                  style={{ textDecoration: "none" }}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.background = NAV_HOVER_BG)
+                    (e.currentTarget.style.background = "rgba(245,158,11,0.06)")
                   }
                   onMouseLeave={(e) =>
                     (e.currentTarget.style.background = "transparent")
                   }
                 >
                   <div
-                    className="w-10 h-10 rounded-2xl flex items-center justify-center shadow-sm flex-shrink-0"
+                    className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                    style={{
+                      background: "linear-gradient(135deg,#475569,#334155)",
+                    }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <circle
+                        cx="12"
+                        cy="12"
+                        r="3"
+                        stroke="white"
+                        strokeWidth="2"
+                      />
+                      <path
+                        d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"
+                        stroke="white"
+                        strokeWidth="2"
+                      />
+                    </svg>
+                  </div>
+                  <span
+                    className="text-sm font-semibold"
+                    style={{ color: "#cbd5e1" }}
+                  >
+                    Settings
+                  </span>
+                </button>
+
+                {/* Smart Contract */}
+                <a
+                  href={smartContractLink}
+                  onClick={() => setToggleMenu(false)}
+                  className="flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-150 no-underline"
+                  style={{ textDecoration: "none" }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.background = "rgba(245,158,11,0.06)")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.background = "transparent")
+                  }
+                >
+                  <div
+                    className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
                     style={{
                       background: "linear-gradient(135deg,#f59e0b,#ef4444)",
                     }}
                   >
                     <svg
-                      className="w-5 h-5"
+                      className="w-4 h-4"
                       fill="none"
                       stroke="white"
                       strokeWidth={2}
@@ -508,11 +450,8 @@ const SideNav = ({ toggleMenu, setToggleMenu }) => {
                     </svg>
                   </div>
                   <span
-                    style={{
-                      color: NAV_TEXT,
-                      fontWeight: 500,
-                      fontSize: "0.9rem",
-                    }}
+                    className="text-sm font-semibold"
+                    style={{ color: "#cbd5e1" }}
                   >
                     Join Smart Contract
                   </span>
@@ -529,41 +468,49 @@ const SideNav = ({ toggleMenu, setToggleMenu }) => {
           <div
             className="absolute inset-0"
             style={{
-              background: "rgba(0,0,0,0.7)",
+              background: "rgba(0,0,0,0.75)",
               backdropFilter: "blur(6px)",
             }}
-            onClick={toggleSettingsPopup}
+            onClick={() => setSettingsVisible(false)}
           />
           <div
             className="relative rounded-t-3xl w-full max-w-md z-10 overflow-hidden pb-8"
             style={{
-              background: SHEET_BG,
-              border: `1px solid ${DRAWER_BORDER}`,
+              background: "#111118",
+              border: "1px solid rgba(245,158,11,0.1)",
+              borderBottom: "none",
             }}
           >
-            <div className="flex justify-center pt-3 pb-1">
+            {/* Drag handle */}
+            <div className="flex justify-center pt-3 pb-2">
               <div
                 className="w-10 h-1 rounded-full"
                 style={{ background: "#1e293b" }}
               />
             </div>
 
+            {/* Sheet header */}
             <div
               className="flex items-center justify-between px-5 py-4"
-              style={{ borderBottom: `1px solid ${DRAWER_BORDER}` }}
+              style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
             >
               <h3
-                style={{ color: "#f1f5f9", fontWeight: 700, fontSize: "1rem" }}
+                className="font-black tracking-wide"
+                style={{
+                  color: "#f1f5f9",
+                  fontFamily: "'Orbitron',sans-serif",
+                  fontSize: 15,
+                }}
               >
                 Settings
               </h3>
               <button
-                onClick={toggleSettingsPopup}
-                className="w-8 h-8 flex items-center justify-center rounded-full"
+                onClick={() => setSettingsVisible(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-full border-none cursor-pointer"
                 style={{ background: "rgba(255,255,255,0.06)" }}
               >
                 <svg
-                  className="w-5 h-5"
+                  className="w-4 h-4"
                   fill="none"
                   stroke="#94a3b8"
                   strokeWidth={2}
@@ -578,188 +525,112 @@ const SideNav = ({ toggleMenu, setToggleMenu }) => {
               </button>
             </div>
 
-            <div>
-              <SettingsItem
-                gradient="linear-gradient(135deg,#6366f1,#a855f7)"
-                icon={
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"
-                      stroke="white"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                    />
-                    <circle
-                      cx="12"
-                      cy="7"
-                      r="4"
-                      stroke="white"
-                      strokeWidth="2"
-                    />
-                  </svg>
-                }
-                label="Profile"
-                sublabel="View & edit your profile"
-                to="/profile"
-                onClick={closeAll}
-              />
-              <SettingsItem
-                gradient="linear-gradient(135deg,#7c3aed,#a855f7)"
-                icon={
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                    <rect
-                      x="3"
-                      y="11"
-                      width="18"
-                      height="11"
-                      rx="2"
-                      stroke="white"
-                      strokeWidth="2"
-                    />
-                    <path
-                      d="M7 11V7a5 5 0 0110 0v4"
-                      stroke="white"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                    />
-                    <circle cx="12" cy="16" r="1.5" fill="white" />
-                  </svg>
-                }
-                label="Change Passcode"
-                sublabel="Update your login passcode"
-                onClick={() => {
-                  closeAll();
-                  navigate("/change-passcode");
-                }}
-              />
-              <SettingsItem
-                gradient="linear-gradient(135deg,#3b82f6,#6366f1)"
-                icon={
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                    <rect
-                      x="5"
-                      y="11"
-                      width="14"
-                      height="10"
-                      rx="2"
-                      stroke="white"
-                      strokeWidth="2"
-                    />
-                    <path
-                      d="M8 11V7a4 4 0 018 0v4"
-                      stroke="white"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                    />
-                    <circle cx="12" cy="16" r="1.5" fill="white" />
-                  </svg>
-                }
-                label="2FA Security"
-                sublabel="Google Authenticator setup"
-                onClick={() => {
-                  closeAll();
-                  navigate("/two-factor-auth");
-                }}
-              />
-              <SettingsItem
-                gradient="linear-gradient(135deg,#10b981,#0d9488)"
-                icon={
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M9 3H5a2 2 0 00-2 2v4M15 3h4a2 2 0 012 2v4M9 21H5a2 2 0 01-2-2v-4M15 21h4a2 2 0 002-2v-4"
-                      stroke="white"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                    />
-                    <circle
-                      cx="12"
-                      cy="12"
-                      r="3"
-                      stroke="white"
-                      strokeWidth="1.8"
-                    />
-                  </svg>
-                }
-                label="Face Verification"
-                sublabel={
-                  user?.face_image
-                    ? "✓ Already submitted"
-                    : "Verify your identity"
-                }
-                onClick={() => {
-                  closeAll();
-                  navigate("/face-verification");
-                }}
-              />
-              {/* {user?.is_referral > 0 && (
-                <>
-                  <SettingsItem
-                    gradient="linear-gradient(135deg,#f472b6,#ec4899)"
-                    icon={
-                      <svg
-                        width="18"
-                        height="18"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                      >
-                        <path
-                          d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"
-                          stroke="white"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                        />
-                        <circle
-                          cx="9"
-                          cy="7"
-                          r="4"
-                          stroke="white"
-                          strokeWidth="2"
-                        />
-                        <path
-                          d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"
-                          stroke="white"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                        />
-                      </svg>
-                    }
-                    label="Referral List"
-                    sublabel="People you referred"
-                    to="/referral-list"
-                    onClick={closeAll}
+            <SettingsItem
+              gradient="linear-gradient(135deg,#f59e0b,#f97316)"
+              icon={
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"
+                    stroke="white"
+                    strokeWidth="2"
+                    strokeLinecap="round"
                   />
-                  <SettingsItem
-                    gradient="linear-gradient(135deg,#f59e0b,#f97316)"
-                    icon={
-                      <svg
-                        width="18"
-                        height="18"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                      >
-                        <circle
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="white"
-                          strokeWidth="2"
-                        />
-                        <path
-                          d="M12 6v6l4 2"
-                          stroke="white"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                        />
-                      </svg>
-                    }
-                    label="Referral History"
-                    sublabel="Your bonus earnings"
-                    to="/referral-history"
-                    onClick={closeAll}
+                  <circle cx="12" cy="7" r="4" stroke="white" strokeWidth="2" />
+                </svg>
+              }
+              label="Profile"
+              sublabel="View & edit your profile"
+              to="/profile"
+              onClick={closeAll}
+            />
+            <SettingsItem
+              gradient="linear-gradient(135deg,#f97316,#ef4444)"
+              icon={
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <rect
+                    x="3"
+                    y="11"
+                    width="18"
+                    height="11"
+                    rx="2"
+                    stroke="white"
+                    strokeWidth="2"
                   />
-                </>
-              )} */}
-            </div>
+                  <path
+                    d="M7 11V7a5 5 0 0110 0v4"
+                    stroke="white"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                  <circle cx="12" cy="16" r="1.5" fill="white" />
+                </svg>
+              }
+              label="Change Passcode"
+              sublabel="Update your login passcode"
+              onClick={() => {
+                closeAll();
+                navigate("/change-passcode");
+              }}
+            />
+            <SettingsItem
+              gradient="linear-gradient(135deg,#3b82f6,#6366f1)"
+              icon={
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <rect
+                    x="5"
+                    y="11"
+                    width="14"
+                    height="10"
+                    rx="2"
+                    stroke="white"
+                    strokeWidth="2"
+                  />
+                  <path
+                    d="M8 11V7a4 4 0 018 0v4"
+                    stroke="white"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                  <circle cx="12" cy="16" r="1.5" fill="white" />
+                </svg>
+              }
+              label="2FA Security"
+              sublabel="Google Authenticator setup"
+              onClick={() => {
+                closeAll();
+                navigate("/two-factor-auth");
+              }}
+            />
+            <SettingsItem
+              gradient="linear-gradient(135deg,#10b981,#0d9488)"
+              icon={
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M9 3H5a2 2 0 00-2 2v4M15 3h4a2 2 0 012 2v4M9 21H5a2 2 0 01-2-2v-4M15 21h4a2 2 0 002-2v-4"
+                    stroke="white"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                  />
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="3"
+                    stroke="white"
+                    strokeWidth="1.8"
+                  />
+                </svg>
+              }
+              label="Face Verification"
+              sublabel={
+                user?.face_image
+                  ? "✓ Already submitted"
+                  : "Verify your identity"
+              }
+              onClick={() => {
+                closeAll();
+                navigate("/face-verification");
+              }}
+            />
           </div>
         </div>
       )}

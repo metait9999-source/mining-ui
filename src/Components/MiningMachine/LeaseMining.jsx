@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import toast from "react-hot-toast";
-import Header from "../Header/Header";
 import { BENEFITS, MachineIcon, Stars } from "./miningUtils";
 import { useUser } from "../../context/UserContext";
 import {
@@ -11,53 +10,69 @@ import {
   getUserMiningSubscriptions,
   cancelMiningSubscription,
 } from "../../api/mining.api";
+import AppNav from "../Home/Navbar";
 
-/* ─── Theme ── */
-const DARK_BG = "#0a0a0f";
-const DARK_CARD = "rgba(255,255,255,0.04)";
-const DARK_BORDER = "rgba(255,255,255,0.07)";
-const DARK_BORDER2 = "rgba(255,255,255,0.06)";
-const TEXT_PRIMARY = "#f1f5f9";
-const TEXT_MUTED = "#64748b";
-
-/* ─── Status badges ── */
-const statusStyle = {
-  active: {
-    background: "rgba(16,185,129,0.12)",
-    color: "rgb(16,185,129)",
-    border: "1px solid rgba(16,185,129,0.2)",
-  },
-  completed: {
-    background: "rgba(100,116,139,0.12)",
-    color: "#64748b",
-    border: "1px solid rgba(100,116,139,0.2)",
-  },
-  cancelled: {
-    background: "rgba(239,68,68,0.12)",
-    color: "rgb(239,68,68)",
-    border: "1px solid rgba(239,68,68,0.2)",
-  },
+/* ── Status badge ── */
+const StatusBadge = ({ status }) => {
+  const map = {
+    active: {
+      bg: "rgba(16,185,129,0.12)",
+      color: "#10b981",
+      border: "1px solid rgba(16,185,129,0.25)",
+    },
+    completed: {
+      bg: "rgba(100,116,139,0.12)",
+      color: "#94a3b8",
+      border: "1px solid rgba(100,116,139,0.2)",
+    },
+    cancelled: {
+      bg: "rgba(239,68,68,0.12)",
+      color: "#ef4444",
+      border: "1px solid rgba(239,68,68,0.25)",
+    },
+  };
+  const s = map[status] || map.completed;
+  return (
+    <span
+      className="px-2.5 py-1 rounded-full font-bold text-xs raj capitalize"
+      style={{ background: s.bg, color: s.color, border: s.border }}
+    >
+      {status}
+    </span>
+  );
 };
 
-/* ── Confirm Modal ── */
-const ConfirmModal = ({ amount, qty, onConfirm, onClose, loading }) => (
+/* ── Confirm modal ── */
+const ConfirmModal = ({ amount, qty, pkg, onConfirm, onClose, loading }) => (
   <div
-    className="fixed inset-0 z-50 flex items-center justify-center px-6"
-    style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)" }}
+    className="fixed inset-0 z-50 flex items-center justify-center px-4"
+    style={{ background: "rgba(0,0,0,0.8)", backdropFilter: "blur(8px)" }}
     onClick={onClose}
   >
     <div
-      className="w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl"
-      style={{ background: "#111118", border: `1px solid ${DARK_BORDER}` }}
+      className="w-full max-w-sm rounded-3xl overflow-hidden"
+      style={{
+        background: "#0d0d1a",
+        border: "1px solid rgba(245,158,11,0.2)",
+      }}
       onClick={(e) => e.stopPropagation()}
     >
+      {/* top accent */}
+      <div
+        className="h-px"
+        style={{
+          background:
+            "linear-gradient(90deg,transparent,#f59e0b,#f97316,transparent)",
+        }}
+      />
+
       <div className="px-8 pt-10 pb-8 text-center">
-        {/* Check circle */}
+        {/* icon */}
         <div
           className="w-20 h-20 rounded-full mx-auto mb-6 flex items-center justify-center"
           style={{
-            background: "linear-gradient(135deg,#6366f1,#a855f7)",
-            boxShadow: "0 8px 24px rgba(99,102,241,0.4)",
+            background: "linear-gradient(135deg,#f59e0b,#f97316)",
+            boxShadow: "0 8px 28px rgba(245,158,11,0.4)",
           }}
         >
           <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
@@ -71,59 +86,70 @@ const ConfirmModal = ({ amount, qty, onConfirm, onClose, loading }) => (
           </svg>
         </div>
 
-        <div className="mb-2">
+        <p className="raj font-bold text-sm mb-2" style={{ color: "#64748b" }}>
+          Escrow Amount
+        </p>
+        <div className="flex items-baseline justify-center gap-2 mb-2">
           <span
-            className="font-black"
-            style={{ fontSize: "9vw", color: "#84cc16" }}
+            className="orb font-black"
+            style={{
+              fontSize: "clamp(32px,8vw,48px)",
+              color: "#f59e0b",
+              lineHeight: 1,
+            }}
           >
             {Number(amount).toLocaleString()}
           </span>
-          <span
-            className="font-bold ml-2"
-            style={{ fontSize: "6vw", color: TEXT_PRIMARY }}
-          >
+          <span className="raj font-bold text-xl" style={{ color: "#f1f5f9" }}>
             USDT
           </span>
         </div>
 
         {qty > 1 && (
-          <p className="mb-2" style={{ fontSize: "3.5vw", color: TEXT_MUTED }}>
+          <p
+            className="raj font-medium text-sm mb-2"
+            style={{ color: "#64748b" }}
+          >
             {qty} machines × {Number(amount / qty).toLocaleString()} USDT each
           </p>
         )}
 
         <p
-          className="font-bold leading-snug mb-8"
-          style={{ fontSize: "5vw", color: TEXT_PRIMARY }}
+          className="orb font-black text-base mb-8"
+          style={{ color: "#f1f5f9" }}
         >
-          Your escrow amount
-          <br />
-          Mining machine leasing
+          {pkg?.name} · Mining Machine Leasing
         </p>
 
         <button
           onClick={onConfirm}
           disabled={loading}
-          className="w-full py-4 rounded-2xl text-white font-extrabold mb-5 active:scale-95 transition-transform disabled:opacity-50"
+          className="w-full py-4 rounded-2xl raj font-black text-sm border-none cursor-pointer mb-5"
           style={{
-            fontSize: "4.5vw",
-            background: "linear-gradient(90deg,#f472b6,#a855f7)",
-            boxShadow: "0 8px 24px rgba(168,85,247,0.35)",
+            background: "linear-gradient(135deg,#f59e0b,#f97316)",
+            color: "#080810",
+            letterSpacing: 2,
+            boxShadow: "0 8px 28px rgba(245,158,11,0.4)",
+            opacity: loading ? 0.6 : 1,
+            transition: "transform .18s",
+            cursor: loading ? "not-allowed" : "pointer",
           }}
         >
-          {loading ? "Processing..." : "Confirm"}
+          {loading ? "PROCESSING..." : "CONFIRM LEASE"}
         </button>
 
-        <p style={{ fontSize: "3.5vw", color: TEXT_MUTED, lineHeight: 1.6 }}>
-          The daily income of the miner will be automatically deposited into
-          your wallet account
+        <p
+          className="raj font-medium text-xs leading-relaxed"
+          style={{ color: "#475569" }}
+        >
+          Daily income is automatically credited to your wallet each day during
+          the lease period.
         </p>
       </div>
     </div>
   </div>
 );
 
-/* ── Lease Detail Page ── */
 const LeaseMining = () => {
   const { id } = useParams();
   const location = useLocation();
@@ -137,15 +163,13 @@ const LeaseMining = () => {
   const [subscriptions, setSubscriptions] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [showHistory, setShowHistory] = useState(false);
-  const [loadingPackage, setLoadingPackage] = useState(
-    !location.state?.machine,
-  );
+  const [loadingPkg, setLoadingPkg] = useState(!location.state?.machine);
 
   const totalCost = machine ? parseFloat(machine.rent_amount) * qty : 0;
 
   useEffect(() => {
     if (!location.state?.machine) {
-      setLoadingPackage(true);
+      setLoadingPkg(true);
       getMiningPackages()
         .then((res) => {
           const pkg = res.data.find((p) => p.id === parseInt(id));
@@ -159,7 +183,7 @@ const LeaseMining = () => {
           toast.error("Failed to load package");
           navigate("/mining");
         })
-        .finally(() => setLoadingPackage(false));
+        .finally(() => setLoadingPkg(false));
     }
   }, [id, location.state, navigate]);
 
@@ -169,7 +193,7 @@ const LeaseMining = () => {
       const res = await getUserMiningSubscriptions(user.id);
       setSubscriptions(res.data);
     } catch {
-      toast.error("Failed to load subscription history");
+      toast.error("Failed to load subscriptions");
     } finally {
       setLoadingHistory(false);
     }
@@ -199,205 +223,311 @@ const LeaseMining = () => {
     }
   };
 
-  const handleCancel = async (subscriptionId) => {
+  const handleCancel = async (subId) => {
     try {
-      await cancelMiningSubscription({ subscriptionId, userId: user.id });
-      toast.success("Subscription cancelled — principal returned");
+      await cancelMiningSubscription({
+        subscriptionId: subId,
+        userId: user.id,
+      });
+      toast.success("Cancelled — principal returned");
       fetchSubscriptions();
     } catch (err) {
       toast.error(err?.response?.data?.error || "Failed to cancel");
     }
   };
 
-  if (loadingPackage) {
+  const pkgColor = machine?.color || "#f59e0b";
+
+  if (loadingPkg)
     return (
       <div
-        className="flex flex-col overflow-hidden"
-        style={{ height: "100dvh", background: DARK_BG }}
+        className="min-h-screen flex items-center justify-center"
+        style={{ background: "#080810" }}
       >
-        <div className="flex-shrink-0">
-          <Header pageTitle="Leasehold Mining" />
-        </div>
-        <div className="flex-1 flex items-center justify-center">
-          <p style={{ color: TEXT_MUTED, fontSize: "3.5vw" }}>Loading...</p>
+        <div className="flex flex-col items-center gap-3">
+          <div
+            className="w-8 h-8 rounded-full border-2 border-amber-500 border-t-transparent"
+            style={{ animation: "spin .8s linear infinite" }}
+          />
+          <p className="raj font-semibold text-sm" style={{ color: "#475569" }}>
+            Loading package...
+          </p>
         </div>
       </div>
     );
-  }
 
   if (!machine) return null;
 
   return (
     <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@700;900&display=swap');
+        .orb{font-family:'Orbitron',sans-serif!important}
+        .raj{font-family:'Rajdhani',sans-serif!important}
+        @keyframes pulse-ring{0%{transform:scale(1);opacity:.8}100%{transform:scale(1.6);opacity:0}}
+        @keyframes fup{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+        .fup{animation:fup .5s ease both}
+        .fup2{animation:fup .5s ease both;animation-delay:.1s;opacity:0}
+        .fup3{animation:fup .5s ease both;animation-delay:.2s;opacity:0}
+        .act{transition:transform .18s,box-shadow .18s}
+        .act:hover{transform:translateY(-2px)}
+        .act:active{transform:scale(.96)}
+        .qty-btn{transition:transform .15s,background .15s}
+        .qty-btn:hover{transform:scale(1.08)}
+        .qty-btn:active{transform:scale(.92)}
+        .benefit-row{transition:background .15s}
+        .benefit-row:hover{background:rgba(245,158,11,0.04)!important}
+      `}</style>
+
       <div
-        className="flex flex-col overflow-hidden"
-        style={{ height: "100dvh", background: DARK_BG }}
+        className="min-h-screen pb-32"
+        style={{ background: "#080810", color: "#e2e8f0" }}
       >
-        {/* ── Scrollable area ── */}
-        <div className="flex-1 overflow-y-auto">
-          {/* Gradient header */}
-          <div
-            className="relative overflow-hidden px-5 pb-16"
-            style={{
-              background: `linear-gradient(135deg,${machine.color}ee 0%,#a855f7 60%,#ec4899 100%)`,
-            }}
-          >
-            <div
-              className="absolute pointer-events-none rounded-full"
-              style={{
-                width: 200,
-                height: 200,
-                background: "rgba(255,255,255,0.07)",
-                top: -50,
-                right: -50,
-              }}
-            />
+        <AppNav />
 
-            <Header pageTitle="Leasehold Mining" />
-
-            {/* Machine hero card */}
+        <div className="px-4 md:px-8 lg:px-16 max-w-screen-xl mx-auto">
+          {/* ══ MACHINE HERO ══ */}
+          <div className="mt-6 fup">
             <div
-              className="relative z-10 rounded-3xl p-5"
+              className="relative rounded-3xl overflow-hidden"
               style={{
-                background: "rgba(255,255,255,0.12)",
-                backdropFilter: "blur(8px)",
+                background: `linear-gradient(135deg,${pkgColor}22,${pkgColor}12,rgba(8,8,16,0.98))`,
+                border: `1px solid ${pkgColor}35`,
               }}
             >
-              <div className="flex items-start gap-4">
-                <div
-                  className="flex-shrink-0 w-20 h-20 rounded-2xl flex items-center justify-center"
-                  style={{ background: "rgba(255,255,255,0.2)" }}
-                >
-                  <MachineIcon size={56} />
-                </div>
-                <div className="flex-1">
-                  <p
-                    className="text-yellow-300 font-black mb-1"
-                    style={{ fontSize: "4.5vw" }}
-                  >
-                    {machine.name}
-                  </p>
-                  <p
-                    className="text-white/80 leading-snug mb-3"
-                    style={{ fontSize: "3.3vw" }}
-                  >
-                    Financial product — not redeemable within{" "}
-                    {machine.duration_days} days
-                  </p>
-                  {/* Quantity control */}
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => setQty(Math.max(1, qty - 1))}
-                      className="w-8 h-8 rounded-full bg-white/30 flex items-center justify-center text-white font-bold active:scale-90 transition-transform"
-                      style={{ fontSize: "5vw" }}
+              <div
+                className="h-px"
+                style={{
+                  background: `linear-gradient(90deg,${pkgColor},transparent)`,
+                }}
+              />
+              {/* glow */}
+              <div
+                className="absolute pointer-events-none rounded-full"
+                style={{
+                  top: -60,
+                  right: -60,
+                  width: 200,
+                  height: 200,
+                  background: `radial-gradient(circle,${pkgColor}18,transparent 70%)`,
+                }}
+              />
+
+              <div className="relative z-10 p-6 md:p-8">
+                <div className="flex flex-col md:flex-row gap-6">
+                  {/* left: machine info */}
+                  <div className="flex items-start gap-5 flex-1">
+                    <div
+                      className="w-20 h-20 md:w-24 md:h-24 rounded-3xl flex items-center justify-center flex-shrink-0"
+                      style={{
+                        background: `${pkgColor}20`,
+                        border: `1px solid ${pkgColor}35`,
+                      }}
                     >
-                      −
-                    </button>
-                    <span
-                      className="text-white font-bold w-6 text-center"
-                      style={{ fontSize: "4.5vw" }}
+                      <MachineIcon size={54} />
+                    </div>
+                    <div>
+                      <p
+                        className="orb font-black mb-1"
+                        style={{
+                          fontSize: "clamp(18px,4vw,26px)",
+                          color: pkgColor,
+                        }}
+                      >
+                        {machine.name}
+                      </p>
+                      <Stars count={machine.stars || 5} />
+                      <p
+                        className="raj font-medium text-sm mt-2 leading-relaxed"
+                        style={{ color: "#64748b" }}
+                      >
+                        Financial product — not redeemable within{" "}
+                        {machine.duration_days} days
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* right: qty control */}
+                  <div className="flex flex-col items-start md:items-end gap-3 md:min-w-48">
+                    <p
+                      className="raj font-bold text-xs tracking-widest uppercase"
+                      style={{ color: "#475569" }}
                     >
-                      {qty}
-                    </span>
-                    <button
-                      onClick={() => setQty(qty + 1)}
-                      className="w-8 h-8 rounded-full bg-white/30 flex items-center justify-center text-white font-bold active:scale-90 transition-transform"
-                      style={{ fontSize: "5vw" }}
+                      Quantity
+                    </p>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => setQty(Math.max(1, qty - 1))}
+                        className="qty-btn w-10 h-10 rounded-full flex items-center justify-center border-none cursor-pointer"
+                        style={{
+                          background: `${pkgColor}20`,
+                          border: `1px solid ${pkgColor}35`,
+                          color: pkgColor,
+                          fontSize: 20,
+                          fontWeight: 800,
+                        }}
+                      >
+                        −
+                      </button>
+                      <span
+                        className="orb font-black text-2xl w-8 text-center"
+                        style={{ color: "#f1f5f9" }}
+                      >
+                        {qty}
+                      </span>
+                      <button
+                        onClick={() => setQty(qty + 1)}
+                        className="qty-btn w-10 h-10 rounded-full flex items-center justify-center border-none cursor-pointer"
+                        style={{
+                          background: `${pkgColor}20`,
+                          border: `1px solid ${pkgColor}35`,
+                          color: pkgColor,
+                          fontSize: 20,
+                          fontWeight: 800,
+                        }}
+                      >
+                        +
+                      </button>
+                    </div>
+                    <div
+                      className="px-4 py-2 rounded-xl"
+                      style={{
+                        background: `${pkgColor}15`,
+                        border: `1px solid ${pkgColor}30`,
+                      }}
                     >
-                      +
-                    </button>
-                    <span
-                      className="text-white/80 font-medium ml-1"
-                      style={{ fontSize: "3.5vw" }}
-                    >
-                      {totalCost.toLocaleString()} USDT
-                    </span>
+                      <span
+                        className="orb font-black text-base"
+                        style={{ color: pkgColor }}
+                      >
+                        {totalCost.toLocaleString()} USDT
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="mt-3">
-                <Stars count={machine.stars || 5} />
               </div>
             </div>
           </div>
 
-          {/* Info cards — overlap header */}
-          <div className="px-4 -mt-6 space-y-4 relative z-10 pb-6">
-            {/* Introduction */}
+          {/* ══ TWO-COL LAYOUT: intro + benefits ══ */}
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-5 fup2">
+            {/* Intro / stats */}
             <div
               className="rounded-3xl overflow-hidden"
               style={{
-                background: DARK_CARD,
-                border: `1px solid ${DARK_BORDER}`,
+                background: "#0a0a14",
+                border: "1px solid rgba(255,255,255,0.07)",
               }}
             >
-              <div className="px-5 pt-5 pb-2">
-                <h2
-                  className="font-black"
-                  style={{ fontSize: "4vw", color: TEXT_PRIMARY }}
+              <div
+                className="px-6 py-5"
+                style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}
+              >
+                <p
+                  className="orb font-black text-base"
+                  style={{ color: "#f1f5f9" }}
                 >
-                  Introduction
-                </h2>
+                  Plan Details
+                </p>
               </div>
-              <div className="px-5 pb-5">
+              <div className="px-6 py-4">
                 {[
-                  { label: "Output", value: `${machine.daily_rate}% USDT/Day` },
-                  { label: "Computing power", value: machine.computing },
-                  { label: "Power", value: machine.power },
                   {
-                    label: "Lease cycle",
-                    value: `${machine.duration_days} Days`,
+                    label: "Daily Output",
+                    val: `${machine.daily_rate}% USDT/Day`,
+                    color: pkgColor,
                   },
                   {
-                    label: "Rent amount",
-                    value: `${Number(machine.rent_amount).toLocaleString()} USDT`,
+                    label: "Computing Power",
+                    val: machine.computing || "—",
+                    color: "#f1f5f9",
                   },
-                ].map((row) => (
+                  {
+                    label: "Power Usage",
+                    val: machine.power || "—",
+                    color: "#f1f5f9",
+                  },
+                  {
+                    label: "Lease Cycle",
+                    val: `${machine.duration_days} Days`,
+                    color: "#f1f5f9",
+                  },
+                  {
+                    label: "Rent Amount",
+                    val: `${Number(machine.rent_amount).toLocaleString()} USDT`,
+                    color: pkgColor,
+                  },
+                  {
+                    label: "Total Cost",
+                    val: `${totalCost.toLocaleString()} USDT (×${qty})`,
+                    color: "#10b981",
+                  },
+                ].map((row, i, arr) => (
                   <div
                     key={row.label}
-                    className="flex items-center justify-between py-3"
-                    style={{ borderBottom: `1px solid ${DARK_BORDER2}` }}
+                    className="flex items-center justify-between py-3.5"
+                    style={{
+                      borderBottom:
+                        i < arr.length - 1
+                          ? "1px solid rgba(255,255,255,0.04)"
+                          : "none",
+                    }}
                   >
-                    <span style={{ fontSize: "3.5vw", color: TEXT_MUTED }}>
+                    <span
+                      className="raj font-semibold text-sm"
+                      style={{ color: "#475569" }}
+                    >
                       {row.label}
                     </span>
                     <span
-                      className="font-bold"
-                      style={{ fontSize: "3.5vw", color: TEXT_PRIMARY }}
+                      className="raj font-bold text-sm"
+                      style={{ color: row.color }}
                     >
-                      {row.value}
+                      {row.val}
                     </span>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Choose us */}
+            {/* Benefits */}
             <div
-              className="rounded-3xl p-5"
+              className="rounded-3xl overflow-hidden"
               style={{
-                background: DARK_CARD,
-                border: `1px solid ${DARK_BORDER}`,
+                background: "#0a0a14",
+                border: "1px solid rgba(255,255,255,0.07)",
               }}
             >
-              <h2
-                className="font-black mb-4"
-                style={{ fontSize: "4vw", color: TEXT_PRIMARY }}
-              >
-                Choose us
-              </h2>
               <div
-                className="rounded-2xl p-4 space-y-3"
-                style={{
-                  background: "rgba(99,102,241,0.08)",
-                  border: "1px solid rgba(99,102,241,0.15)",
-                }}
+                className="px-6 py-5"
+                style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}
               >
+                <p
+                  className="orb font-black text-base"
+                  style={{ color: "#f1f5f9" }}
+                >
+                  Why Choose Us
+                </p>
+              </div>
+              <div className="px-6 py-4">
                 {BENEFITS.map((b, i) => (
-                  <div key={i} className="flex items-start gap-3">
+                  <div
+                    key={i}
+                    className="benefit-row flex items-start gap-3 py-3.5 -mx-2 px-2 rounded-xl"
+                    style={{
+                      borderBottom:
+                        i < BENEFITS.length - 1
+                          ? "1px solid rgba(255,255,255,0.04)"
+                          : "none",
+                    }}
+                  >
                     <div
-                      className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mt-0.5"
-                      style={{ background: "#6366f1" }}
+                      className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
+                      style={{
+                        background: "rgba(245,158,11,0.15)",
+                        border: "1px solid rgba(245,158,11,0.3)",
+                      }}
                     >
                       <svg
                         width="10"
@@ -407,46 +537,58 @@ const LeaseMining = () => {
                       >
                         <path
                           d="M2 5l2 2 4-4"
-                          stroke="white"
+                          stroke="#f59e0b"
                           strokeWidth="1.5"
                           strokeLinecap="round"
                           strokeLinejoin="round"
                         />
                       </svg>
                     </div>
-                    <span style={{ fontSize: "3.5vw", color: TEXT_MUTED }}>
+                    <span
+                      className="raj font-medium text-sm"
+                      style={{ color: "#94a3b8" }}
+                    >
                       {b}
                     </span>
                   </div>
                 ))}
               </div>
             </div>
+          </div>
 
-            {/* My subscriptions */}
+          {/* ══ MY SUBSCRIPTIONS (collapsible) ══ */}
+          <div className="mt-5 fup3">
             <div
               className="rounded-3xl overflow-hidden"
               style={{
-                background: DARK_CARD,
-                border: `1px solid ${DARK_BORDER}`,
+                background: "#0a0a14",
+                border: "1px solid rgba(255,255,255,0.07)",
               }}
             >
-              <div
-                className="flex items-center justify-between px-5 py-4 cursor-pointer"
-                onClick={() => setShowHistory(!showHistory)}
+              <button
+                onClick={() => setShowHistory((p) => !p)}
+                className="w-full flex items-center justify-between px-6 py-5 bg-transparent border-none cursor-pointer text-left"
+                style={{
+                  borderBottom: showHistory
+                    ? "1px solid rgba(255,255,255,0.05)"
+                    : "none",
+                }}
               >
-                <h2
-                  className="font-black"
-                  style={{ fontSize: "4vw", color: TEXT_PRIMARY }}
-                >
-                  My Subscriptions
+                <div className="flex items-center gap-3">
+                  <span
+                    className="orb font-black text-base"
+                    style={{ color: "#f1f5f9" }}
+                  >
+                    My Subscriptions
+                  </span>
                   {subscriptions.filter((s) => s.status === "active").length >
                     0 && (
                     <span
-                      className="ml-2 px-2 py-0.5 rounded-full font-bold"
+                      className="px-2.5 py-1 rounded-full raj font-bold text-xs"
                       style={{
-                        fontSize: "2.8vw",
-                        background: "rgba(16,185,129,0.15)",
-                        color: "rgb(16,185,129)",
+                        background: "rgba(16,185,129,0.12)",
+                        color: "#10b981",
+                        border: "1px solid rgba(16,185,129,0.2)",
                       }}
                     >
                       {
@@ -456,157 +598,184 @@ const LeaseMining = () => {
                       active
                     </span>
                   )}
-                </h2>
+                </div>
                 <svg
                   width="16"
                   height="16"
                   viewBox="0 0 16 16"
                   fill="none"
                   style={{
-                    transform: showHistory ? "rotate(180deg)" : "rotate(0deg)",
+                    transform: showHistory ? "rotate(180deg)" : "none",
                     transition: "transform .2s",
+                    color: "#475569",
                   }}
                 >
                   <path
                     d="M4 6l4 4 4-4"
-                    stroke={TEXT_MUTED}
+                    stroke="currentColor"
                     strokeWidth="1.5"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   />
                 </svg>
-              </div>
+              </button>
 
               {showHistory && (
-                <div className="px-5 pb-5">
+                <div className="px-6 py-4">
                   {loadingHistory ? (
                     <p
-                      className="text-center py-4"
-                      style={{ fontSize: "3.5vw", color: TEXT_MUTED }}
+                      className="text-center py-8 raj font-semibold text-sm"
+                      style={{ color: "#334155" }}
                     >
                       Loading...
                     </p>
                   ) : subscriptions.length === 0 ? (
                     <p
-                      className="text-center py-4"
-                      style={{ fontSize: "3.5vw", color: TEXT_MUTED }}
+                      className="text-center py-8 raj font-semibold text-sm"
+                      style={{ color: "#334155" }}
                     >
                       No subscriptions yet
                     </p>
                   ) : (
-                    <div className="space-y-3">
+                    <div className="flex flex-col gap-3">
                       {subscriptions.map((sub) => (
                         <div
                           key={sub.id}
                           className="rounded-2xl overflow-hidden"
-                          style={{ border: `1px solid ${DARK_BORDER}` }}
+                          style={{
+                            border: "1px solid rgba(255,255,255,0.06)",
+                            background: "rgba(255,255,255,0.02)",
+                          }}
                         >
                           <div
-                            className="h-0.5 w-full"
+                            className="h-0.5"
                             style={{
-                              background: `linear-gradient(90deg,${machine.color},#a855f7)`,
+                              background: `linear-gradient(90deg,${pkgColor},transparent)`,
                             }}
                           />
-                          <div className="p-3">
-                            <div className="flex items-center justify-between mb-2">
+                          <div className="p-4">
+                            <div className="flex items-start justify-between mb-4">
                               <div>
                                 <p
-                                  className="font-bold"
-                                  style={{
-                                    fontSize: "3.2vw",
-                                    color: TEXT_PRIMARY,
-                                  }}
+                                  className="raj font-bold text-sm mb-0.5"
+                                  style={{ color: "#f1f5f9" }}
                                 >
                                   {sub.package_name}
                                 </p>
                                 <p
-                                  style={{ fontSize: "3vw", color: TEXT_MUTED }}
+                                  className="raj text-xs"
+                                  style={{ color: "#475569" }}
                                 >
-                                  {sub.duration_days} days · Qty: {sub.quantity}
+                                  {sub.duration_days} days · Qty {sub.quantity}
                                 </p>
                               </div>
-                              <span
-                                className="px-2 py-0.5 rounded-full font-semibold"
-                                style={{
-                                  fontSize: "2.8vw",
-                                  ...(statusStyle[sub.status] ||
-                                    statusStyle.completed),
-                                }}
-                              >
-                                {sub.status}
-                              </span>
+                              <StatusBadge status={sub.status} />
                             </div>
+
                             <div
-                              className="grid grid-cols-3 gap-2 pt-2"
-                              style={{ borderTop: `1px solid ${DARK_BORDER2}` }}
+                              className="grid grid-cols-3 gap-3 mb-4"
+                              style={{
+                                borderTop: "1px solid rgba(255,255,255,0.05)",
+                                paddingTop: 16,
+                              }}
+                            >
+                              {[
+                                {
+                                  lbl: "Rent Paid",
+                                  val: Number(sub.rent_amount).toLocaleString(),
+                                  color: "#f1f5f9",
+                                },
+                                {
+                                  lbl: "Daily",
+                                  val: `${sub.daily_rate}%`,
+                                  color: "#f59e0b",
+                                },
+                                {
+                                  lbl: "Earned",
+                                  val: `+${Number(sub.total_earned).toFixed(4)}`,
+                                  color: "#10b981",
+                                },
+                              ].map((r) => (
+                                <div key={r.lbl}>
+                                  <p
+                                    className="raj text-xs mb-0.5"
+                                    style={{ color: "#475569" }}
+                                  >
+                                    {r.lbl}
+                                  </p>
+                                  <p
+                                    className="raj font-bold text-sm"
+                                    style={{ color: r.color }}
+                                  >
+                                    {r.val}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+
+                            <div
+                              className="flex items-center justify-between"
+                              style={{
+                                borderTop: "1px solid rgba(255,255,255,0.05)",
+                                paddingTop: 12,
+                              }}
                             >
                               <div>
                                 <p
-                                  style={{ fontSize: "3vw", color: TEXT_MUTED }}
+                                  className="raj text-xs mb-1"
+                                  style={{ color: "#475569" }}
                                 >
-                                  Rent paid
+                                  Ends{" "}
+                                  {format(
+                                    new Date(sub.end_date),
+                                    "dd MMM yyyy",
+                                  )}
                                 </p>
-                                <p
-                                  className="font-bold"
-                                  style={{
-                                    fontSize: "3.2vw",
-                                    color: TEXT_PRIMARY,
-                                  }}
-                                >
-                                  {Number(sub.rent_amount).toLocaleString()}
-                                </p>
+                                {sub.status === "active" && (
+                                  <div
+                                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg"
+                                    style={{
+                                      background: "rgba(245,158,11,0.1)",
+                                      border: "1px solid rgba(245,158,11,0.2)",
+                                    }}
+                                  >
+                                    <svg
+                                      width="9"
+                                      height="9"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                    >
+                                      <circle
+                                        cx="12"
+                                        cy="12"
+                                        r="10"
+                                        stroke="#f59e0b"
+                                        strokeWidth="2"
+                                      />
+                                      <path
+                                        d="M12 6v6l4 2"
+                                        stroke="#f59e0b"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                      />
+                                    </svg>
+                                    <span
+                                      className="raj font-bold text-xs"
+                                      style={{ color: "#f59e0b" }}
+                                    >
+                                      {format(
+                                        new Date(sub.end_date),
+                                        "dd MMM yyyy",
+                                      )}
+                                    </span>
+                                  </div>
+                                )}
                               </div>
-                              <div>
-                                <p
-                                  style={{ fontSize: "3vw", color: TEXT_MUTED }}
-                                >
-                                  Daily
-                                </p>
-                                <p
-                                  className="font-bold"
-                                  style={{
-                                    fontSize: "3.2vw",
-                                    color: "#a78bfa",
-                                  }}
-                                >
-                                  {sub.daily_rate}%
-                                </p>
-                              </div>
-                              <div>
-                                <p
-                                  style={{ fontSize: "3vw", color: TEXT_MUTED }}
-                                >
-                                  Earned
-                                </p>
-                                <p
-                                  className="font-bold"
-                                  style={{
-                                    fontSize: "3.2vw",
-                                    color: "rgb(16,185,129)",
-                                  }}
-                                >
-                                  +{Number(sub.total_earned).toFixed(4)}
-                                </p>
-                              </div>
-                            </div>
-                            <div
-                              className="flex items-center justify-between mt-2 pt-2"
-                              style={{ borderTop: `1px solid ${DARK_BORDER2}` }}
-                            >
-                              <p style={{ fontSize: "3vw", color: TEXT_MUTED }}>
-                                Ends{" "}
-                                {format(new Date(sub.end_date), "dd MMM yyyy")}
-                              </p>
                               {sub.status === "active" && (
                                 <button
                                   onClick={() => handleCancel(sub.id)}
-                                  className="font-medium underline underline-offset-2"
-                                  style={{
-                                    fontSize: "3vw",
-                                    color: "rgb(239,68,68)",
-                                    background: "transparent",
-                                    border: "none",
-                                  }}
+                                  className="raj font-bold text-xs border-none cursor-pointer bg-transparent underline underline-offset-2 act"
+                                  style={{ color: "#ef4444" }}
                                 >
                                   Cancel
                                 </button>
@@ -622,44 +791,50 @@ const LeaseMining = () => {
             </div>
           </div>
         </div>
-        {/* ── END scrollable area ── */}
+      </div>
 
-        {/* ── Lease button ── */}
-        <div
-          className="flex-shrink-0 px-4 py-4"
-          style={{ background: DARK_BG, borderTop: `1px solid ${DARK_BORDER}` }}
-        >
+      {/* ══ STICKY LEASE BUTTON ══ */}
+      <div
+        className="fixed bottom-0 inset-x-0 z-30 px-4 md:px-8 lg:px-16 pb-6 pt-3"
+        style={{
+          background: "rgba(8,8,16,0.95)",
+          backdropFilter: "blur(16px)",
+          borderTop: "1px solid rgba(255,255,255,0.06)",
+        }}
+      >
+        <div className="max-w-screen-xl mx-auto">
           <button
             onClick={() => setShowConfirm(true)}
-            className="w-full py-4 rounded-2xl flex items-center justify-center gap-3 font-extrabold text-white active:scale-95 transition-transform"
+            className="act w-full py-4 rounded-2xl raj font-black text-sm border-none cursor-pointer flex items-center justify-center gap-3"
             style={{
-              fontSize: "4.5vw",
-              background: "linear-gradient(90deg,#f472b6,#a855f7)",
-              boxShadow: "0 8px 24px rgba(168,85,247,0.4)",
+              background: `linear-gradient(135deg,${pkgColor},${pkgColor}cc)`,
+              color: "#080810",
+              letterSpacing: 2,
+              boxShadow: `0 8px 28px ${pkgColor}45`,
+              fontSize: "clamp(14px,3.5vw,16px)",
             }}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
               <rect
                 x="2"
                 y="7"
                 width="20"
                 height="14"
                 rx="2"
-                fill="white"
-                opacity="0.3"
+                fill="rgba(0,0,0,0.25)"
               />
               <path
                 d="M16 7V5a2 2 0 00-4 0v2M2 11h20"
-                stroke="white"
+                stroke="currentColor"
                 strokeWidth="1.8"
                 strokeLinecap="round"
               />
-              <circle cx="16" cy="14" r="1.5" fill="white" />
+              <circle cx="16" cy="14" r="1.5" fill="currentColor" />
             </svg>
-            <span>Lease now</span>
+            LEASE NOW
             <span
-              className="ml-2 px-3 py-1 rounded-xl font-bold"
-              style={{ fontSize: "3.5vw", background: "rgba(255,255,255,0.2)" }}
+              className="px-3 py-1 rounded-xl font-bold text-xs"
+              style={{ background: "rgba(0,0,0,0.2)", letterSpacing: 1 }}
             >
               {totalCost.toLocaleString()} USDT
             </span>
@@ -671,6 +846,7 @@ const LeaseMining = () => {
         <ConfirmModal
           amount={totalCost}
           qty={qty}
+          pkg={machine}
           onConfirm={handleConfirm}
           onClose={() => setShowConfirm(false)}
           loading={submitting}

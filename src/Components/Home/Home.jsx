@@ -1,627 +1,786 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Link } from "react-router-dom";
-import CryptoMarket from "../CryptoMarket/CryptoMarket";
-import ForexMarket from "../ForexMarket/ForexMarket";
-import MetalMarket from "../MetalMarket/MetalMarket";
-import TopMarket from "../TopMarket/TopMarket";
-import SideNav from "../Header/SideNav/SideNav";
-import belIcon from "../../Assets/images/icon_bell.svg";
-import menuIcon from "../../Assets/images/icon_menu.svg";
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import { useUser } from "../../context/UserContext";
+import useWallets from "../../hooks/useWallets";
+import AppNav from "./Navbar";
 
-const SLIDES = [
-  { id: 1, src: "/assets/banner1.webp", alt: "Banner 1" },
-  { id: 2, src: "/assets/banner2.webp", alt: "Banner 2" },
+const Icons = {
+  mining: (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M14.5 2.5l7 7-10 10-7-7 10-10z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M2 22l4-4M15 8l1 1"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  ),
+  arb: (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M16 3h5v5M4 20L21 3M21 16v5h-5"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  ),
+  wallet: (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <rect
+        x="2"
+        y="5"
+        width="20"
+        height="14"
+        rx="2"
+        stroke="currentColor"
+        strokeWidth="2"
+      />
+      <path
+        d="M16 12h.01M2 10h20"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  ),
+  chart: (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M3 3v18h18"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M7 16l4-4 4 4 4-5"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  ),
+  loan: (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  ),
+  tx: (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  ),
+  users: (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="2" />
+      <path
+        d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  ),
+  funds: (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  ),
+  shield: (
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+    </svg>
+  ),
+  zap: (
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+    </svg>
+  ),
+  globe: (
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
+      <path
+        d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      />
+    </svg>
+  ),
+  arrow: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M5 12h14M12 5l7 7-7 7"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  ),
+};
+
+const QUICK = [
   {
-    id: 3,
-    src: "https://miro.medium.com/v2/resize:fit:1400/1*xJXiEZKZEiXLOsXGH90sgg.jpeg",
-    alt: "Banner 3",
+    label: "Mining",
+    to: "/mining",
+    icon: Icons.mining,
+    c1: "#f59e0b",
+    c2: "#f97316",
   },
-  { id: 4, src: "/assets/banner4.jpg", alt: "Banner 4" },
+  {
+    label: "Wallet",
+    to: "/account",
+    icon: Icons.wallet,
+    c1: "#10b981",
+    c2: "#059669",
+  },
+  {
+    label: "Arbitrage",
+    to: "/arbitrage",
+    icon: Icons.arb,
+    c1: "#3b82f6",
+    c2: "#6366f1",
+  },
+  {
+    label: "Transactions",
+    to: "/transaction",
+    icon: Icons.tx,
+    c1: "#14b8a6",
+    c2: "#0891b2",
+  },
 ];
 
-const AUTO_PLAY_INTERVAL = 3500;
+const STATS = [
+  { val: "847K+", lbl: "Active Miners", color: "#f59e0b" },
+  { val: "$2.4B", lbl: "Total Mined", color: "#10b981" },
+  { val: "99.9%", lbl: "Uptime", color: "#3b82f6" },
+  { val: "180+", lbl: "Countries", color: "#a855f7" },
+];
 
-function HeroBannerSlider({ onMenuClick }) {
-  const [current, setCurrent] = useState(0);
-  const [dragging, setDragging] = useState(false);
-  const [dragStartX, setDragStartX] = useState(0);
-  const [dragDelta, setDragDelta] = useState(0);
-  const timerRef = useRef(null);
-  const total = SLIDES.length;
+const SH = ({ title, action, onAction }) => (
+  <div className="flex items-center justify-between mb-5">
+    <div className="flex items-center gap-2.5">
+      <div
+        className="w-0.5 h-5 rounded-full"
+        style={{ background: "linear-gradient(to bottom,#f59e0b,#f97316)" }}
+      />
+      <span
+        className="font-black tracking-wider"
+        style={{
+          fontFamily: "'Orbitron',sans-serif",
+          fontSize: "clamp(13px,3.5vw,16px)",
+          color: "#f1f5f9",
+        }}
+      >
+        {title}
+      </span>
+    </div>
+    {action && (
+      <button
+        onClick={onAction}
+        className="text-xs font-semibold bg-transparent border-none cursor-pointer"
+        style={{
+          fontFamily: "'Rajdhani',sans-serif",
+          color: "#f59e0b",
+          letterSpacing: 1,
+        }}
+      >
+        {action} ›
+      </button>
+    )}
+  </div>
+);
 
-  const goTo = useCallback(
-    (index) => setCurrent((index + total) % total),
-    [total],
-  );
-  const next = useCallback(() => goTo(current + 1), [current, goTo]);
-  const resetTimer = useCallback(() => {
-    clearInterval(timerRef.current);
-    timerRef.current = setInterval(next, AUTO_PLAY_INTERVAL);
-  }, [next]);
-
-  useEffect(() => {
-    resetTimer();
-    return () => clearInterval(timerRef.current);
-  }, [resetTimer]);
-
-  const onDragStart = (clientX) => {
-    clearInterval(timerRef.current);
-    setDragging(true);
-    setDragStartX(clientX);
-    setDragDelta(0);
-  };
-  const onDragMove = (clientX) => {
-    if (!dragging) return;
-    setDragDelta(clientX - dragStartX);
-  };
-  const onDragEnd = () => {
-    if (!dragging) return;
-    setDragging(false);
-    if (dragDelta < -40) next();
-    else if (dragDelta > 40) goTo(current - 1);
-    setDragDelta(0);
-    resetTimer();
-  };
-
-  const iconBtnStyle = {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    background: "rgba(10, 10, 15, 0.55)",
-    backdropFilter: "blur(12px)",
-    WebkitBackdropFilter: "blur(12px)",
-    border: "1px solid rgba(255,255,255,0.15)",
-    boxShadow: "0 2px 12px rgba(0,0,0,0.4)",
-    flexShrink: 0,
-    cursor: "pointer",
-  };
+export default function Home() {
+  const navigate = useNavigate();
+  const { user } = useUser();
+  const { wallets } = useWallets(user?.id);
+  const total =
+    wallets?.reduce((s, w) => s + parseFloat(w.coin_amount || 0), 0) ?? 0;
 
   return (
     <div
-      style={{
-        position: "relative",
-        width: "100%",
-        overflow: "hidden",
-        borderRadius: "0 0 7vw 7vw",
-        background: "#0a0a0f",
-        userSelect: "none",
-        WebkitUserSelect: "none",
-      }}
-      onTouchStart={(e) => onDragStart(e.touches[0].clientX)}
-      onTouchMove={(e) => onDragMove(e.touches[0].clientX)}
-      onTouchEnd={onDragEnd}
-      onMouseDown={(e) => onDragStart(e.clientX)}
-      onMouseMove={(e) => onDragMove(e.clientX)}
-      onMouseUp={onDragEnd}
-      onMouseLeave={onDragEnd}
+      className="min-h-screen pb-12"
+      style={{ background: "#080810", color: "#e2e8f0" }}
     >
-      {/* ── Top bar ── */}
-      <div
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 50,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "12px 14px",
-        }}
-      >
-        <Link
-          to="/notification"
-          style={{ ...iconBtnStyle, textDecoration: "none" }}
-          onMouseDown={(e) => e.stopPropagation()}
-          onTouchStart={(e) => e.stopPropagation()}
-        >
-          <img
-            src={belIcon}
-            alt="Notifications"
-            style={{ width: 18, height: 18, filter: "brightness(0) invert(1)" }}
-          />
-        </Link>
-
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 7,
-            background: "rgba(10, 10, 15, 0.55)",
-            backdropFilter: "blur(12px)",
-            WebkitBackdropFilter: "blur(12px)",
-            border: "1px solid rgba(255,255,255,0.15)",
-            boxShadow: "0 2px 12px rgba(0,0,0,0.4)",
-            borderRadius: 99,
-            padding: "6px 14px 6px 8px",
-          }}
-        >
-          <svg
-            viewBox="0 0 40 40"
-            fill="none"
-            style={{ width: 26, height: 26, flexShrink: 0 }}
-          >
-            <path
-              d="M20 4L36 13V27L20 36L4 27V13L20 4Z"
-              fill="rgba(255,255,255,0.25)"
-              stroke="white"
-              strokeWidth="1.5"
-            />
-            <path
-              d="M20 4L36 13L20 22L4 13L20 4Z"
-              fill="rgba(255,255,255,0.55)"
-            />
-            <path d="M20 22L36 13V27L20 36V22Z" fill="rgba(255,255,255,0.35)" />
-            <path d="M20 22L4 13V27L20 36V22Z" fill="rgba(255,255,255,0.2)" />
-          </svg>
-          <span
-            style={{
-              color: "#fff",
-              fontWeight: 700,
-              fontSize: 15,
-              letterSpacing: "-0.01em",
-              lineHeight: 1,
-              whiteSpace: "nowrap",
-            }}
-          >
-            Trust Pro
-          </span>
-        </div>
-
-        <button
-          onClick={onMenuClick}
-          onMouseDown={(e) => e.stopPropagation()}
-          onTouchStart={(e) => e.stopPropagation()}
-          style={{ ...iconBtnStyle, border: "none" }}
-        >
-          <img
-            src={menuIcon}
-            alt="Menu"
-            style={{ width: 18, height: 18, filter: "brightness(0) invert(1)" }}
-          />
-        </button>
-      </div>
-
-      <div
-        style={{
-          display: "flex",
-          transition: dragging
-            ? "none"
-            : "transform 0.45s cubic-bezier(0.25,0.46,0.45,0.94)",
-          transform: `translateX(calc(${-current * 100}% + ${dragDelta}px))`,
-          willChange: "transform",
-        }}
-      >
-        {SLIDES.map((slide) => (
-          <div
-            key={slide.id}
-            style={{
-              minWidth: "100%",
-              position: "relative",
-              aspectRatio: "16/10",
-              overflow: "hidden",
-              background: "#1a1a2e",
-            }}
-          >
-            <img
-              src={slide.src}
-              alt={slide.alt}
-              draggable={false}
-              style={{
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-                display: "block",
-                pointerEvents: "none",
-              }}
-            />
-            <div
-              style={{
-                position: "absolute",
-                bottom: 0,
-                left: 0,
-                right: 0,
-                height: "35%",
-                background:
-                  "linear-gradient(to top, rgba(10,10,15,0.65) 0%, transparent 100%)",
-              }}
-            />
-          </div>
-        ))}
-      </div>
-
-      <div
-        style={{
-          position: "absolute",
-          bottom: 14,
-          left: "50%",
-          transform: "translateX(-50%)",
-          display: "flex",
-          gap: 6,
-          zIndex: 20,
-        }}
-      >
-        {SLIDES.map((_, i) => (
-          <button
-            key={i}
-            onMouseDown={(e) => e.stopPropagation()}
-            onTouchStart={(e) => e.stopPropagation()}
-            onClick={() => {
-              goTo(i);
-              resetTimer();
-            }}
-            style={{
-              width: i === current ? 22 : 7,
-              height: 7,
-              borderRadius: 99,
-              border: "none",
-              padding: 0,
-              cursor: "pointer",
-              background: i === current ? "#a78bfa" : "rgba(255,255,255,0.35)",
-              transition:
-                "width 0.35s cubic-bezier(0.34,1.56,0.64,1), background 0.25s",
-            }}
-          />
-        ))}
-      </div>
-
-      <div
-        style={{
-          position: "absolute",
-          bottom: 14,
-          right: 16,
-          zIndex: 20,
-          background: "rgba(0,0,0,0.45)",
-          backdropFilter: "blur(6px)",
-          borderRadius: 99,
-          padding: "3px 10px",
-          color: "rgba(255,255,255,0.75)",
-          fontSize: 11,
-          fontWeight: 600,
-          letterSpacing: "0.04em",
-        }}
-      >
-        {current + 1} / {total}
-      </div>
-    </div>
-  );
-}
-
-const TABS = [
-  { key: "crypto", label: "Digital Currency" },
-  { key: "forex", label: "Foreign Exchange" },
-  { key: "metal", label: "Precious Metal" },
-  { key: "top", label: "Top" },
-];
-
-function Home() {
-  const [activeTab, setActiveTab] = useState("crypto");
-  const [toggleMenu, setToggleMenu] = useState(false);
-
-  return (
-    <div className="min-h-screen" style={{ background: "#0a0a0f" }}>
-      <HeroBannerSlider onMenuClick={() => setToggleMenu((prev) => !prev)} />
-
-      <SideNav toggleMenu={toggleMenu} setToggleMenu={setToggleMenu} />
-
-      <div className="px-4 pt-6 pb-2">
-        <div className="flex items-center gap-3 mb-4">
-          <span
-            className="inline-block rounded-full flex-shrink-0"
-            style={{ width: "1.1vw", height: "5.33vw", background: "#7c3aed" }}
-          />
-          <span className="text-white font-bold" style={{ fontSize: "5.33vw" }}>
-            Market
-          </span>
-        </div>
-        <div className="flex gap-2 flex-wrap mb-4">
-          {TABS.map(({ key, label }) => (
-            <button
-              key={key}
-              onClick={() => setActiveTab(key)}
-              className="rounded-full font-medium transition-colors"
-              style={{
-                fontSize: "3.4vw",
-                padding: "1.5vw 3.5vw",
-                border: "0.02667rem solid #7c3aed",
-                background: activeTab === key ? "#7c3aed" : "transparent",
-                color: activeTab === key ? "#fff" : "#7c3aed",
-              }}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        <div id="crypto-market">
-          {activeTab === "crypto" && <CryptoMarket />}
-        </div>
-        <div id="forex-market"> {activeTab === "forex" && <ForexMarket />}</div>
-        <div id="metal-market"> {activeTab === "metal" && <MetalMarket />}</div>
-        <div id="top-market"> {activeTab === "top" && <TopMarket />}</div>
-      </div>
-
-      <div className="px-4 pt-4 pb-2 flex flex-col gap-4">
-        <div
-          className="flex items-center justify-between rounded-3xl overflow-hidden relative"
-          style={{
-            background: "rgba(255,255,255,0.04)",
-            border: "1px solid rgba(255,255,255,0.07)",
-            padding: "5vw",
-            minHeight: "32vw",
-          }}
-        >
-          <div className="flex-1 z-10 pr-2">
-            <h3
-              className="font-bold text-white mb-1"
-              style={{ fontSize: "4.8vw" }}
-            >
-              Ai Smart Arbitrage
-            </h3>
-            <p className="text-slate-400" style={{ fontSize: "3.5vw" }}>
-              Smart trading on 200 exchanges
-            </p>
-          </div>
-          <div
-            className="flex-shrink-0 relative"
-            style={{ width: "30vw", height: "26vw" }}
-          >
-            <div
-              className="absolute rounded-full opacity-40"
-              style={{
-                width: "22vw",
-                height: "22vw",
-                background: "linear-gradient(135deg,#c084fc,#7c3aed)",
-                right: 0,
-                top: "50%",
-                transform: "translateY(-50%)",
-              }}
-            />
-            <div
-              className="absolute rounded-full opacity-60"
-              style={{
-                width: "13vw",
-                height: "13vw",
-                background: "linear-gradient(135deg,#a855f7,#6d28d9)",
-                right: "7vw",
-                top: 0,
-              }}
-            />
-            <div
-              className="absolute rounded-xl opacity-80 z-20"
-              style={{
-                width: "14vw",
-                height: "10vw",
-                background: "linear-gradient(135deg,#6d28d9,#9333ea)",
-                right: "6vw",
-                top: "28%",
-              }}
-            />
-            <div
-              className="absolute rounded-full flex items-center justify-center text-white font-bold z-30"
-              style={{
-                width: "8vw",
-                height: "8vw",
-                fontSize: "4vw",
-                background: "#6b7280",
-                right: "20vw",
-                top: 0,
-              }}
-            >
-              Ξ
-            </div>
-            <div
-              className="absolute rounded-full flex items-center justify-center text-white font-bold z-30"
-              style={{
-                width: "8vw",
-                height: "8vw",
-                fontSize: "4vw",
-                background: "#f59e0b",
-                right: "2vw",
-                bottom: "2vw",
-              }}
-            >
-              ₿
-            </div>
-          </div>
-        </div>
-
-        <div
-          className="flex items-center justify-between rounded-3xl overflow-hidden relative"
-          style={{
-            background: "rgba(255,255,255,0.04)",
-            border: "1px solid rgba(255,255,255,0.07)",
-            padding: "5vw",
-            minHeight: "32vw",
-          }}
-        >
-          <div className="flex-1 z-10 pr-2">
-            <h3
-              className="font-bold text-white mb-1"
-              style={{ fontSize: "4.8vw" }}
-            >
-              Leveraged trading
-            </h3>
-            <p className="text-slate-400" style={{ fontSize: "3.5vw" }}>
-              Intelligent leveraged trading to improve the efficiency of ROI
-            </p>
-          </div>
-          <div
-            className="flex-shrink-0 relative"
-            style={{ width: "30vw", height: "26vw" }}
-          >
-            <div
-              className="absolute rounded-2xl opacity-65"
-              style={{
-                width: "22vw",
-                height: "18vw",
-                background: "linear-gradient(135deg,#7c3aed,#a855f7)",
-                right: "2vw",
-                top: "50%",
-                transform: "translateY(-50%)",
-                boxShadow: "0 4px 14px rgba(124,58,237,0.3)",
-              }}
-            />
-            <div
-              className="absolute rounded-2xl opacity-50"
-              style={{
-                width: "16vw",
-                height: "13vw",
-                background: "linear-gradient(135deg,#4c1d95,#7c3aed)",
-                right: "8vw",
-                bottom: 0,
-              }}
-            />
-            <div
-              className="absolute rounded-full flex items-center justify-center text-white font-bold z-30"
-              style={{
-                width: "8vw",
-                height: "8vw",
-                fontSize: "4vw",
-                background: "#f59e0b",
-                right: "6vw",
-                bottom: "2vw",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.18)",
-                animation: "floatCoin 3s ease-in-out infinite",
-              }}
-            >
-              ₿
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="px-4 py-4">
-        <div className="flex items-center gap-3 mb-4">
-          <span
-            className="inline-block rounded-full flex-shrink-0"
-            style={{ width: "1.1vw", height: "5.33vw", background: "#7c3aed" }}
-          />
-          <h3
-            className="text-white font-extrabold"
-            style={{ fontSize: "5.33vw" }}
-          >
-            Invite friends
-          </h3>
-        </div>
-        <div
-          className="flex items-center rounded-3xl overflow-hidden relative"
-          style={{
-            background:
-              "linear-gradient(130deg,#ec4899 0%,#a855f7 55%,#8b5cf6 100%)",
-            padding: "5vw 5vw 5vw 4vw",
-            minHeight: "38vw",
-            boxShadow: "0 4px 20px rgba(168,85,247,0.3)",
-          }}
-        >
-          <div
-            className="pointer-events-none absolute rounded-full"
-            style={{
-              top: "-20%",
-              left: "-10%",
-              width: "38vw",
-              height: "38vw",
-              background: "rgba(255,255,255,0.08)",
-            }}
-          />
-          <div
-            className="flex-shrink-0 relative"
-            style={{ width: "32vw", height: "28vw" }}
-          >
-            <div
-              className="absolute rounded-full flex items-center justify-center text-white font-bold"
-              style={{
-                width: "14vw",
-                height: "14vw",
-                fontSize: "6vw",
-                background: "#f59e0b",
-                top: "5%",
-                left: "10%",
-                boxShadow: "0 4px 12px rgba(0,0,0,0.25)",
-              }}
-            >
-              ₿
-            </div>
-            <div
-              className="absolute rounded-full flex items-center justify-center text-white font-bold"
-              style={{
-                width: "10vw",
-                height: "10vw",
-                fontSize: "4.5vw",
-                background: "#6b7280",
-                bottom: "10%",
-                right: 0,
-                boxShadow: "0 4px 12px rgba(0,0,0,0.25)",
-              }}
-            >
-              Ξ
-            </div>
-            <div
-              className="absolute rounded-full flex items-center justify-center text-white font-bold"
-              style={{
-                width: "7vw",
-                height: "7vw",
-                fontSize: "3vw",
-                background: "#34d399",
-                top: "45%",
-                left: "50%",
-                boxShadow: "0 4px 12px rgba(0,0,0,0.25)",
-              }}
-            >
-              ◎
-            </div>
-          </div>
-          <div className="flex-1 text-right z-10">
-            <h3
-              className="text-white font-bold"
-              style={{ fontSize: "5vw", lineHeight: 1.3 }}
-            >
-              Invite friends to join
-            </h3>
-          </div>
-        </div>
-      </div>
-
-      <div className="px-4 pb-8">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <span
-              className="inline-block rounded-full flex-shrink-0"
-              style={{
-                width: "1.1vw",
-                height: "5.33vw",
-                background: "#7c3aed",
-              }}
-            />
-            <h3
-              className="text-white font-extrabold"
-              style={{ fontSize: "5.33vw" }}
-            >
-              News
-            </h3>
-          </div>
-          <span
-            className="text-violet-400 font-semibold"
-            style={{ fontSize: "4vw" }}
-          >
-            More
-          </span>
-        </div>
-        <div className="text-slate-500 text-center text-sm mt-4">
-          News does not represent investment advice
-        </div>
-      </div>
-
       <style>{`
-        @keyframes floatCoin {
-          0%,100% { transform: translateY(0); }
-          50%      { transform: translateY(-2vw); }
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@700;900&display=swap');
+        .orb{font-family:'Orbitron',sans-serif!important}
+        .raj{font-family:'Rajdhani',sans-serif!important}
+        @keyframes pulse-ring{0%{transform:scale(1);opacity:.8}100%{transform:scale(1.6);opacity:0}}
+        @keyframes fa{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+        @keyframes fb{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+        @keyframes fc{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+        @keyframes fup{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+        .fa{animation:fa 3.8s ease-in-out infinite}
+        .fb{animation:fb 3.8s ease-in-out infinite;animation-delay:.8s}
+        .fc{animation:fc 3.8s ease-in-out infinite;animation-delay:1.5s}
+        .fup{animation:fup .55s ease both}
+        .qb{transition:transform .18s}
+        .qb:hover{transform:translateY(-4px)}
+        .qb:active{transform:scale(.9)}
+        .sc{transition:transform .22s,border-color .22s;cursor:pointer}
+        .sc:hover{transform:translateY(-5px)}
+        .tc{transition:transform .2s}
+        .tc:hover{transform:translateY(-3px)}
       `}</style>
+
+      <AppNav />
+
+      <div className="px-4 md:px-8 lg:px-16 max-w-screen-xl mx-auto">
+        {/* BALANCE CARD */}
+        <div className="mt-6 fup">
+          <div
+            className="relative rounded-3xl overflow-hidden"
+            style={{
+              background: "linear-gradient(135deg,#0f1020,#0d0d1a 55%,#140f1a)",
+              border: "1px solid rgba(245,158,11,0.14)",
+            }}
+          >
+            <div
+              className="absolute pointer-events-none rounded-full"
+              style={{
+                top: -70,
+                right: -70,
+                width: 240,
+                height: 240,
+                background:
+                  "radial-gradient(circle,rgba(245,158,11,.1),transparent 70%)",
+              }}
+            />
+            <div
+              className="absolute pointer-events-none rounded-full"
+              style={{
+                bottom: -50,
+                left: -50,
+                width: 180,
+                height: 180,
+                background:
+                  "radial-gradient(circle,rgba(249,115,22,.07),transparent 70%)",
+              }}
+            />
+            <div
+              className="absolute top-0 inset-x-0 h-px"
+              style={{
+                background:
+                  "linear-gradient(90deg,transparent,#f59e0b,#f97316,transparent)",
+              }}
+            />
+
+            <div className="relative z-10 p-6 md:p-8">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
+                <div>
+                  <p
+                    className="raj text-xs font-bold tracking-widest uppercase mb-2"
+                    style={{ color: "#475569" }}
+                  >
+                    Total Portfolio
+                  </p>
+                  <div className="flex items-baseline gap-2 mb-2">
+                    <span
+                      className="orb font-black"
+                      style={{
+                        fontSize: "clamp(30px,7vw,52px)",
+                        color: "#f1f5f9",
+                        lineHeight: 1,
+                      }}
+                    >
+                      ${total.toFixed(2)}
+                    </span>
+                    <span
+                      className="raj font-bold text-base"
+                      style={{ color: "#475569" }}
+                    >
+                      USDT
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="relative w-2 h-2 flex-shrink-0">
+                      <div
+                        className="absolute inset-0 rounded-full"
+                        style={{
+                          background: "#10b981",
+                          animation: "pulse-ring 2s ease-out infinite",
+                        }}
+                      />
+                      <div
+                        className="w-2 h-2 rounded-full"
+                        style={{ background: "#10b981" }}
+                      />
+                    </div>
+                    <span
+                      className="raj font-bold text-xs tracking-widest uppercase"
+                      style={{ color: "#10b981" }}
+                    >
+                      Live Balance
+                    </span>
+                    {user?.name && (
+                      <span
+                        className="raj text-xs font-medium"
+                        style={{ color: "#334155" }}
+                      >
+                        · {user.name}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-col gap-3 sm:items-end">
+                  <button
+                    onClick={() => navigate("/account")}
+                    className="flex items-center gap-2 px-5 py-3 rounded-xl font-black text-sm border-none cursor-pointer hover:opacity-85 self-start sm:self-auto"
+                    style={{
+                      background: "linear-gradient(135deg,#f59e0b,#f97316)",
+                      color: "#080810",
+                      fontFamily: "'Rajdhani',sans-serif",
+                      letterSpacing: 2,
+                      boxShadow: "0 6px 20px rgba(245,158,11,.3)",
+                    }}
+                  >
+                    + DEPOSIT
+                  </button>
+                  <div className="flex gap-2">
+                    {[
+                      { lbl: "Today", val: "$0.00", color: "#10b981" },
+                      { lbl: "Plans", val: "0", color: "#f59e0b" },
+                    ].map((s) => (
+                      <div
+                        key={s.lbl}
+                        className="rounded-xl px-4 py-2.5 text-center"
+                        style={{
+                          background: "rgba(255,255,255,.03)",
+                          border: "1px solid rgba(255,255,255,.06)",
+                          minWidth: 80,
+                        }}
+                      >
+                        <p
+                          className="orb font-black"
+                          style={{
+                            fontSize: "clamp(14px,4vw,18px)",
+                            color: s.color,
+                          }}
+                        >
+                          {s.val}
+                        </p>
+                        <p
+                          className="raj font-semibold text-xs"
+                          style={{ color: "#334155" }}
+                        >
+                          {s.lbl}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* QUICK ACTIONS */}
+        <div className="mt-8">
+          <SH title="Quick Actions" />
+          <div className="grid grid-cols-4 sm:grid-cols-8 gap-3 md:gap-4">
+            {QUICK.map((q) => (
+              <button
+                key={q.label}
+                onClick={() => navigate(q.to)}
+                className="qb flex flex-col items-center gap-2 bg-transparent border-none cursor-pointer p-0"
+              >
+                <div
+                  className="rounded-2xl flex items-center justify-center"
+                  style={{
+                    width: "clamp(50px,12vw,62px)",
+                    height: "clamp(50px,12vw,62px)",
+                    background: `linear-gradient(135deg,${q.c1},${q.c2})`,
+                    color: "white",
+                    boxShadow: `0 6px 20px ${q.c1}40`,
+                  }}
+                >
+                  {q.icon}
+                </div>
+                <span
+                  className="raj font-bold text-center leading-tight"
+                  style={{
+                    fontSize: "clamp(9px,2.5vw,11px)",
+                    color: "#64748b",
+                  }}
+                >
+                  {q.label}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* SERVICE CARDS */}
+        <div className="mt-10">
+          <SH
+            title="Services"
+            action="Explore"
+            onAction={() => navigate("/mining")}
+          />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div
+              className="sc rounded-3xl relative overflow-hidden"
+              style={{
+                background: "#0d0d1a",
+                border: "1px solid rgba(245,158,11,0.15)",
+              }}
+              onClick={() => navigate("/mining")}
+            >
+              <div
+                className="absolute top-0 inset-x-0 h-0.5"
+                style={{
+                  background:
+                    "linear-gradient(90deg,#f59e0b,#f97316,transparent)",
+                }}
+              />
+              <div
+                className="absolute top-0 right-0 w-28 h-28 pointer-events-none rounded-full"
+                style={{
+                  background:
+                    "radial-gradient(circle,rgba(245,158,11,.12),transparent 70%)",
+                  transform: "translate(30%,-30%)",
+                }}
+              />
+              <div className="px-6 py-7">
+                <div
+                  className="w-12 h-12 rounded-2xl flex items-center justify-center mb-5 fa"
+                  style={{
+                    background: "rgba(245,158,11,.1)",
+                    border: "1px solid rgba(245,158,11,.2)",
+                    color: "#f59e0b",
+                  }}
+                >
+                  {Icons.mining}
+                </div>
+                <h3 className="orb font-black text-lg mb-2 text-white">
+                  Cloud Mining
+                </h3>
+                <p
+                  className="raj font-medium text-sm mb-5 leading-relaxed"
+                  style={{ color: "#64748b" }}
+                >
+                  Deposit USDT and earn daily crypto rewards with zero hardware
+                  required.
+                </p>
+                <div className="flex items-center justify-between">
+                  <span
+                    className="raj font-bold text-xs px-3 py-1.5 rounded-full"
+                    style={{
+                      background: "rgba(245,158,11,.1)",
+                      color: "#f59e0b",
+                      border: "1px solid rgba(245,158,11,.2)",
+                    }}
+                  >
+                    UP TO 5% DAILY
+                  </span>
+                  <span style={{ color: "#f59e0b" }}>{Icons.arrow}</span>
+                </div>
+              </div>
+            </div>
+
+            <div
+              className="sc rounded-3xl relative overflow-hidden"
+              style={{
+                background: "#0d0d1a",
+                border: "1px solid rgba(59,130,246,0.15)",
+              }}
+              onClick={() => navigate("/arbitrage")}
+            >
+              <div
+                className="absolute top-0 inset-x-0 h-0.5"
+                style={{
+                  background:
+                    "linear-gradient(90deg,#3b82f6,#6366f1,transparent)",
+                }}
+              />
+              <div
+                className="absolute top-0 right-0 w-28 h-28 pointer-events-none rounded-full"
+                style={{
+                  background:
+                    "radial-gradient(circle,rgba(59,130,246,.1),transparent 70%)",
+                  transform: "translate(30%,-30%)",
+                }}
+              />
+              <div className="px-6 py-7">
+                <div
+                  className="w-12 h-12 rounded-2xl flex items-center justify-center mb-5 fb"
+                  style={{
+                    background: "rgba(59,130,246,.1)",
+                    border: "1px solid rgba(59,130,246,.2)",
+                    color: "#3b82f6",
+                  }}
+                >
+                  {Icons.arb}
+                </div>
+                <h3 className="orb font-black text-lg mb-2 text-white">
+                  AI Arbitrage
+                </h3>
+                <p
+                  className="raj font-medium text-sm mb-5 leading-relaxed"
+                  style={{ color: "#64748b" }}
+                >
+                  Automated smart trading across 200+ exchanges maximizing your
+                  ROI 24/7.
+                </p>
+                <div className="flex items-center justify-between">
+                  <span
+                    className="flex items-center gap-1.5 raj font-bold text-xs px-3 py-1.5 rounded-full"
+                    style={{
+                      background: "rgba(16,185,129,.1)",
+                      color: "#10b981",
+                      border: "1px solid rgba(16,185,129,.2)",
+                    }}
+                  >
+                    <span
+                      className="w-1.5 h-1.5 rounded-full inline-block"
+                      style={{
+                        background: "#10b981",
+                        animation: "pulse-ring 1.8s ease-out infinite",
+                      }}
+                    />
+                    LIVE NOW
+                  </span>
+                  <span style={{ color: "#3b82f6" }}>{Icons.arrow}</span>
+                </div>
+              </div>
+            </div>
+            {/* 
+            <div
+              className="sc rounded-3xl relative overflow-hidden"
+              style={{
+                background: "linear-gradient(150deg,#170f1e,#0d0d1a)",
+                border: "1px solid rgba(168,85,247,0.18)",
+              }}
+              onClick={() => navigate("/referral-list")}
+            >
+              <div
+                className="absolute top-0 inset-x-0 h-0.5"
+                style={{
+                  background:
+                    "linear-gradient(90deg,#a855f7,#ec4899,transparent)",
+                }}
+              />
+              <div
+                className="absolute bottom-0 right-0 w-28 h-28 pointer-events-none rounded-full"
+                style={{
+                  background:
+                    "radial-gradient(circle,rgba(168,85,247,.14),transparent 70%)",
+                  transform: "translate(30%,30%)",
+                }}
+              />
+              <div className="px-6 py-7">
+                <div
+                  className="w-12 h-12 rounded-2xl flex items-center justify-center mb-5 fc"
+                  style={{
+                    background: "rgba(168,85,247,.1)",
+                    border: "1px solid rgba(168,85,247,.2)",
+                    color: "#a855f7",
+                  }}
+                >
+                  {Icons.users}
+                </div>
+                <h3 className="orb font-black text-lg mb-2 text-white">
+                  Invite & Earn
+                </h3>
+                <p
+                  className="raj font-medium text-sm mb-5 leading-relaxed"
+                  style={{ color: "#64748b" }}
+                >
+                  Refer friends and earn multi-level commissions on every
+                  deposit they make.
+                </p>
+                <div className="flex items-center justify-between">
+                  <span
+                    className="raj font-bold text-xs px-3 py-1.5 rounded-full"
+                    style={{
+                      background: "rgba(168,85,247,.1)",
+                      color: "#a855f7",
+                      border: "1px solid rgba(168,85,247,.2)",
+                    }}
+                  >
+                    MULTI-LEVEL
+                  </span>
+                  <span style={{ color: "#a855f7" }}>{Icons.arrow}</span>
+                </div>
+              </div>
+            </div> */}
+          </div>
+        </div>
+
+        {/* PLATFORM STATS */}
+        <div className="mt-10">
+          <SH title="Platform Stats" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {STATS.map((s) => (
+              <div
+                key={s.lbl}
+                className="tc rounded-2xl px-4 py-5 text-center"
+                style={{
+                  background: "rgba(255,255,255,.02)",
+                  border: "1px solid rgba(255,255,255,.05)",
+                }}
+              >
+                <p
+                  className="orb font-black mb-1.5"
+                  style={{ fontSize: "clamp(20px,5vw,28px)", color: s.color }}
+                >
+                  {s.val}
+                </p>
+                <p
+                  className="raj font-semibold text-xs tracking-widest uppercase"
+                  style={{ color: "#334155" }}
+                >
+                  {s.lbl}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* TRUST PILLARS */}
+        <div className="mt-10">
+          <SH title="Why CryptoMine" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[
+              {
+                icon: Icons.shield,
+                color: "#10b981",
+                bg: "rgba(16,185,129,.07)",
+                border: "rgba(16,185,129,.14)",
+                title: "Military Security",
+                desc: "256-bit encryption, cold storage & multi-sig wallets protect every asset.",
+              },
+              {
+                icon: Icons.zap,
+                color: "#f59e0b",
+                bg: "rgba(245,158,11,.07)",
+                border: "rgba(245,158,11,.14)",
+                title: "Instant Withdrawals",
+                desc: "Withdraw earnings to any wallet in minutes — zero holding periods.",
+              },
+              {
+                icon: Icons.globe,
+                color: "#3b82f6",
+                bg: "rgba(59,130,246,.07)",
+                border: "rgba(59,130,246,.14)",
+                title: "Global Infrastructure",
+                desc: "40+ Tier-4 data centers across 6 continents for non-stop mining.",
+              },
+            ].map((w) => (
+              <div
+                key={w.title}
+                className="tc rounded-2xl px-5 py-5 flex items-start gap-4"
+                style={{
+                  background: "rgba(255,255,255,.02)",
+                  border: `1px solid ${w.border}`,
+                }}
+              >
+                <div
+                  className="flex-shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center"
+                  style={{
+                    background: w.bg,
+                    border: `1px solid ${w.border}`,
+                    color: w.color,
+                  }}
+                >
+                  {w.icon}
+                </div>
+                <div>
+                  <p
+                    className="orb font-black text-sm mb-1.5"
+                    style={{ color: "#f1f5f9" }}
+                  >
+                    {w.title}
+                  </p>
+                  <p
+                    className="font-medium text-sm leading-relaxed"
+                    style={{ color: "white" }}
+                  >
+                    {w.desc}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* SUPPORT */}
+        <div className="mt-8 mb-4">
+          <div
+            className="rounded-2xl px-5 py-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+            style={{
+              background: "rgba(245,158,11,.04)",
+              border: "1px solid rgba(245,158,11,.1)",
+            }}
+          >
+            <div>
+              <p className="orb font-black text-sm text-white mb-1">
+                Need Help?
+              </p>
+              <p
+                className="raj font-medium text-xs"
+                style={{ color: "#475569" }}
+              >
+                24/7 support via Live Chat · WhatsApp · Telegram
+              </p>
+            </div>
+            <button
+              onClick={() => navigate("/live-chat")}
+              className="flex items-center gap-2 px-5 py-3 rounded-xl font-black text-xs border-none cursor-pointer hover:opacity-85 flex-shrink-0"
+              style={{
+                background: "linear-gradient(135deg,#f59e0b,#f97316)",
+                color: "#080810",
+                fontFamily: "'Rajdhani',sans-serif",
+                letterSpacing: 2,
+              }}
+            >
+              CONTACT US {Icons.arrow}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
-
-export default Home;

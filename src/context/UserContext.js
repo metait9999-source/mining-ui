@@ -12,7 +12,7 @@ const UserContext = createContext();
 
 export const UserProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
-    const savedUser = localStorage.getItem("user");
+    const savedUser = sessionStorage.getItem("user");
     return savedUser ? JSON.parse(savedUser) : null;
   });
 
@@ -26,9 +26,9 @@ export const UserProvider = ({ children }) => {
   // Keep localStorage in sync whenever user changes
   useEffect(() => {
     if (user) {
-      localStorage.setItem("user", JSON.stringify(user));
+      sessionStorage.setItem("user", JSON.stringify(user));
     } else {
-      localStorage.removeItem("user");
+      sessionStorage.removeItem("user");
     }
   }, [user]);
 
@@ -58,7 +58,7 @@ export const UserProvider = ({ children }) => {
   const logout = () => {
     setUser(null);
     setAdminUser(null);
-    localStorage.removeItem("user");
+    sessionStorage.removeItem("user");
     sessionStorage.removeItem("adminUser");
     sessionStorage.removeItem("passcode_verified");
   };

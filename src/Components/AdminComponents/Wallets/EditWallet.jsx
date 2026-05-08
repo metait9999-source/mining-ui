@@ -1,5 +1,5 @@
 import axios from "axios";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { API_BASE_URL } from "../../../api/getApiURL";
@@ -10,13 +10,21 @@ import { MdOutlineQrCode2 } from "react-icons/md";
 const inputCls =
   "w-full px-3.5 py-2.5 text-[13.5px] bg-gray-50 border border-gray-200 rounded-xl text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/25 focus:border-indigo-400 focus:bg-white transition-all";
 
+const readonlyCls =
+  "w-full px-3.5 py-2.5 text-[13.5px] bg-gray-100 border border-gray-200 rounded-xl text-gray-400 cursor-not-allowed select-none";
+
 const selectCls =
   "w-full px-3.5 py-2.5 text-[13.5px] bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/25 focus:border-indigo-400 focus:bg-white transition-all appearance-none cursor-pointer";
 
-const FormField = ({ label, children }) => (
+const FormField = ({ label, children, locked }) => (
   <div className="flex flex-col gap-1.5">
-    <label className="text-[11.5px] font-semibold text-gray-500 uppercase tracking-wider">
+    <label className="text-[11.5px] font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
       {label}
+      {locked && (
+        <span className="text-[10px] font-semibold text-gray-300 normal-case tracking-normal">
+          (locked)
+        </span>
+      )}
     </label>
     {children}
   </div>
@@ -47,7 +55,6 @@ const ImageUploadField = ({
           type="button"
           onClick={onClear}
           className="absolute top-2 right-2 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors shadow-sm"
-          aria-label="Remove image"
         >
           <FiX size={12} />
         </button>
@@ -76,9 +83,7 @@ const ImageUploadField = ({
 const EditWallet = () => {
   const location = useLocation();
   const existingWallet = location.state.wallet;
-  const coinAPI = "https://api.coinlore.net/api/tickers/?limit=50";
   const navigate = useNavigate();
-  const [coinsData, setCoinsData] = useState([]);
 
   const resolveLogoPreview = (coinLogo) => {
     if (!coinLogo) return null;
@@ -96,30 +101,11 @@ const EditWallet = () => {
   );
 
   const [formData, setFormData] = useState({
-    coin_id: existingWallet.coin_id,
-    coin_name: existingWallet.coin_name,
-    coin_logo: existingWallet.coin_logo, // existing path or URL string
-    wallet_network: existingWallet.wallet_network,
-    coin_symbol: existingWallet.coin_symbol,
     wallet_address: existingWallet.wallet_address,
-    wallet_qr: existingWallet.wallet_qr, // existing path string
+    coin_logo: existingWallet.coin_logo,
+    wallet_qr: existingWallet.wallet_qr,
     status: existingWallet.status,
   });
-
-  useEffect(() => {
-    const fetchCoinsData = async () => {
-      try {
-        const response = await fetch(coinAPI);
-        if (!response.ok)
-          throw new Error(`HTTP error! status: ${response.status}`);
-        const data = await response.json();
-        setCoinsData(data.data);
-      } catch (err) {
-        console.error(err.message);
-      }
-    };
-    fetchCoinsData();
-  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -129,14 +115,14 @@ const EditWallet = () => {
   const handleLogoChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    setFormData((prev) => ({ ...prev, coin_logo: file })); // new File overrides old
+    setFormData((prev) => ({ ...prev, coin_logo: file }));
     setLogoPreview(URL.createObjectURL(file));
   };
 
   const handleQrChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    setFormData((prev) => ({ ...prev, wallet_qr: file })); // ← field name: wallet_qr
+    setFormData((prev) => ({ ...prev, wallet_qr: file }));
     setQrPreview(URL.createObjectURL(file));
   };
 
@@ -144,21 +130,19 @@ const EditWallet = () => {
     e.preventDefault();
     try {
       const payload = new FormData();
-      payload.append("coin_id", formData.coin_id);
-      payload.append("coin_name", formData.coin_name);
-      payload.append("wallet_network", formData.wallet_network);
-      payload.append("coin_symbol", formData.coin_symbol);
+      payload.append("coin_id", existingWallet.coin_id);
+      payload.append("coin_name", existingWallet.coin_name);
+      payload.append("coin_symbol", existingWallet.coin_symbol);
+      payload.append("wallet_network", existingWallet.wallet_network);
       payload.append("wallet_address", formData.wallet_address);
       payload.append("status", formData.status);
 
-      // coin_logo: new File upload OR keep existing path/URL as string
       if (formData.coin_logo instanceof File) {
         payload.append("coin_logo", formData.coin_logo);
       } else if (formData.coin_logo) {
         payload.append("coin_logo", formData.coin_logo);
       }
 
-      // wallet_qr: new File upload OR keep existing path string
       if (formData.wallet_qr instanceof File) {
         payload.append("wallet_qr", formData.wallet_qr);
       } else if (formData.wallet_qr) {
@@ -177,7 +161,7 @@ const EditWallet = () => {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* ── Page header ── */}
+      {/* ── Header ── */}
       <div className="flex items-center gap-2.5">
         <button
           onClick={() => navigate("/panel/wallets")}
@@ -208,76 +192,35 @@ const EditWallet = () => {
             </h2>
           </div>
           <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
-            {formData.coin_symbol || "—"}
+            {existingWallet.coin_symbol}
           </span>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6">
+          {/* ── Locked info banner ── */}
+          <div className="flex items-center gap-2 mb-5 px-3.5 py-2.5 rounded-xl bg-amber-50 border border-amber-100">
+            <span className="text-amber-400 text-[13px]">🔒</span>
+            <p className="text-[12px] text-amber-600 font-medium">
+              Coin details are locked. Only address, images, and status can be
+              changed.
+            </p>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            {/* Coin locked */}
-            <FormField label="Coin (locked)">
-              <select
-                value={formData.coin_name}
-                disabled
-                className={`${selectCls} opacity-60 cursor-not-allowed`}
-              >
-                <option value={formData.coin_name}>{formData.coin_name}</option>
-                {coinsData.map((coin) => (
-                  <option key={coin.id} value={coin.id}>
-                    {coin.name}
-                  </option>
-                ))}
-              </select>
+            {/* Locked fields */}
+            <FormField label="Coin Name" locked>
+              <div className={readonlyCls}>{existingWallet.coin_name}</div>
             </FormField>
 
-            <FormField label="Coin Name">
-              <input
-                type="text"
-                name="coin_name"
-                value={formData.coin_name}
-                onChange={handleChange}
-                placeholder="e.g. Bitcoin"
-                required
-                className={inputCls}
-              />
+            <FormField label="Coin Symbol" locked>
+              <div className={readonlyCls}>{existingWallet.coin_symbol}</div>
             </FormField>
 
-            <FormField label="Coin Symbol">
-              <input
-                type="text"
-                name="coin_symbol"
-                value={formData.coin_symbol}
-                onChange={handleChange}
-                placeholder="e.g. BTC"
-                required
-                className={inputCls}
-              />
+            <FormField label="Wallet Network" locked>
+              <div className={readonlyCls}>{existingWallet.wallet_network}</div>
             </FormField>
 
-            <FormField label="Wallet Network">
-              <input
-                type="text"
-                name="wallet_network"
-                value={formData.wallet_network}
-                onChange={handleChange}
-                placeholder="e.g. ERC-20"
-                required
-                className={inputCls}
-              />
-            </FormField>
-
-            <FormField label="Wallet Address">
-              <input
-                type="text"
-                name="wallet_address"
-                value={formData.wallet_address}
-                onChange={handleChange}
-                placeholder="Enter wallet address"
-                required
-                className={inputCls}
-              />
-            </FormField>
-
+            {/* Status — editable */}
             <FormField label="Status">
               <select
                 name="status"
@@ -290,7 +233,22 @@ const EditWallet = () => {
               </select>
             </FormField>
 
-            {/* Coin Logo */}
+            {/* Wallet Address — editable, full width */}
+            <div className="sm:col-span-2">
+              <FormField label="Wallet Address">
+                <input
+                  type="text"
+                  name="wallet_address"
+                  value={formData.wallet_address}
+                  onChange={handleChange}
+                  placeholder="Enter wallet address"
+                  required
+                  className={inputCls}
+                />
+              </FormField>
+            </div>
+
+            {/* Coin Logo — editable */}
             <ImageUploadField
               label="Coin Logo"
               icon={FiUpload}
@@ -303,12 +261,12 @@ const EditWallet = () => {
               }}
             />
 
-            {/* Wallet QR Code */}
+            {/* Wallet QR — editable */}
             <ImageUploadField
               label="Wallet QR Code"
               icon={MdOutlineQrCode2}
               previewSrc={qrPreview}
-              inputName="wallet_qr" // ← renamed from "documents"
+              inputName="wallet_qr"
               accept="image/*"
               onChange={handleQrChange}
               onClear={() => {
