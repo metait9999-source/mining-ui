@@ -111,16 +111,48 @@ const DraggableChatButton = ({ user }) => {
   const menuRef = useRef(null);
 
   const [showMenu, setShowMenu] = useState(false);
-  const [pos, setPos] = useState({
-    x: window.innerWidth - 120,
-    y: window.innerHeight - 120,
-  });
   const [dragging, setDragging] = useState(false);
+
+  // ── FIX: viewport height এর % দিয়ে position করো scroll proof ──
+  const getDefaultPos = () => ({
+    x: window.innerWidth - 80,
+    y: window.innerHeight - 100,
+  });
+
+  const [pos, setPos] = useState(() => {
+    // localStorage থেকে last position restore করো
+    try {
+      const saved = localStorage.getItem("chat_btn_pos");
+      if (saved) {
+        const p = JSON.parse(saved);
+        // validate — screen size change হলে reset
+        if (p.x < window.innerWidth && p.y < window.innerHeight) return p;
+      }
+    } catch {}
+    return getDefaultPos();
+  });
 
   const dragStart = useRef({ x: 0, y: 0 });
   const touchStart = useRef({ x: 0, y: 0 });
   const posRef = useRef(pos);
   posRef.current = pos;
+
+  // ── FIX: position save করো drag শেষে ──
+  const savePos = (newPos) => {
+    setPos(newPos);
+    try {
+      localStorage.setItem("chat_btn_pos", JSON.stringify(newPos));
+    } catch {}
+  };
+
+  // ── FIX: resize হলে position clamp করো ──
+  useEffect(() => {
+    const handleResize = () => {
+      setPos((prev) => clamp(prev.x, prev.y));
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     if (!showMenu) return;
@@ -152,29 +184,40 @@ const DraggableChatButton = ({ user }) => {
     };
     setDragging(false);
   };
+
   const handleTouchMove = (e) => {
     const t = e.touches[0];
     const dx = t.clientX - touchStart.current.x;
     const dy = t.clientY - touchStart.current.y;
     if (Math.sqrt(dx * dx + dy * dy) > 8) {
       e.preventDefault();
-      setPos(
-        clamp(t.clientX - dragStart.current.x, t.clientY - dragStart.current.y),
+      // ── FIX: t.clientY use করো — scroll position independent ──
+      const newPos = clamp(
+        t.clientX - dragStart.current.x,
+        t.clientY - dragStart.current.y,
       );
+      setPos(newPos);
+      posRef.current = newPos;
       setDragging(true);
     }
   };
+
   const handleTouchEnd = (e) => {
     const t = e.changedTouches[0];
     const dx = t.clientX - touchStart.current.x;
     const dy = t.clientY - touchStart.current.y;
     setDragging(false);
+
     if (Math.sqrt(dx * dx + dy * dy) < 8) {
       e.preventDefault();
       if (document.activeElement) document.activeElement.blur();
       setShowMenu((p) => !p);
+    } else {
+      // drag শেষে save করো
+      savePos(posRef.current);
     }
   };
+
   const handleMouseDown = (e) => {
     if (document.activeElement) document.activeElement.blur();
     const sx = e.clientX,
@@ -190,17 +233,21 @@ const DraggableChatButton = ({ user }) => {
       if (Math.sqrt(dx * dx + dy * dy) > 8) {
         moved = true;
         setDragging(true);
-        setPos(
-          clamp(
-            e.clientX - dragStart.current.x,
-            e.clientY - dragStart.current.y,
-          ),
+        const newPos = clamp(
+          e.clientX - dragStart.current.x,
+          e.clientY - dragStart.current.y,
         );
+        setPos(newPos);
+        posRef.current = newPos;
       }
     };
     const onUp = () => {
       setDragging(false);
-      if (!moved) setShowMenu((p) => !p);
+      if (!moved) {
+        setShowMenu((p) => !p);
+      } else {
+        savePos(posRef.current); // drag শেষে save
+      }
       document.removeEventListener("mousemove", onMove);
       document.removeEventListener("mouseup", onUp);
     };
