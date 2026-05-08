@@ -272,7 +272,6 @@ const Funds = () => {
       .catch(() => copy(address)) || copy(address);
   };
 
-  // New recharge submit — uses /deposits/request
   const handleRechargeSubmit = async (e) => {
     e.preventDefault();
     if (submitting) return;
@@ -286,32 +285,21 @@ const Funds = () => {
     }
 
     setSubmitting(true);
-    setRechargeStep(2); // verifying
 
     try {
-      const res = await axios.post(`${API_BASE_URL}/deposits/request`, {
+      await axios.post(`${API_BASE_URL}/deposits/request`, {
         user_id: user.id,
         coin_id: wallet?.coin_id,
         amount: Number(amount),
       });
 
-      setRechargeResult(res.data);
-      setRechargeStep(3); // result
+      toast.success(
+        "✅ Deposit request submitted! We'll credit once confirmed.",
+      );
       refetch();
-
-      if (res.data.status === "approved") {
-        toast.success(
-          `✅ ${res.data.actualAmount} ${wallet?.coin_id} credited!`,
-        );
-        refetchUserBalance();
-      } else {
-        toast("⏳ Submitted. Will credit once confirmed on-chain.", {
-          icon: "🔄",
-        });
-      }
+      closeRechargeModal();
     } catch (err) {
-      toast.error(err?.response?.data?.error || "Verification failed");
-      setRechargeStep(1);
+      toast.error(err?.response?.data?.error || "Submission failed");
     } finally {
       setSubmitting(false);
     }
