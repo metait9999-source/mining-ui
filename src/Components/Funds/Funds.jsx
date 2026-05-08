@@ -287,7 +287,7 @@ const Funds = () => {
     setSubmitting(true);
 
     try {
-      await axios.post(`${API_BASE_URL}/deposits/request`, {
+      await axios.post(`${API_BASE_URL}/deposits`, {
         user_id: user.id,
         coin_id: wallet?.coin_id,
         amount: Number(amount),
