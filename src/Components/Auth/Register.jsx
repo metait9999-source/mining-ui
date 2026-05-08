@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import axios from "axios";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom"; // ← ADD useSearchParams
 import { API_BASE_URL } from "../../api/getApiURL";
 import { toast } from "react-toastify";
 import { useVisitorTrack } from "../../hooks/useVisitorTrack";
@@ -37,6 +37,7 @@ const InputField = ({
   value,
   onChange,
   required = true,
+  readOnly = false,
   children,
 }) => (
   <div>
@@ -54,7 +55,8 @@ const InputField = ({
         value={value}
         onChange={onChange}
         required={required}
-        className={`w-full px-4 py-3.5 rounded-xl text-slate-100 text-base font-medium placeholder-slate-600 outline-none transition-all duration-200 focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500/50 border border-white/10 bg-white/[0.04] ${children ? "pr-12" : ""}`}
+        readOnly={readOnly}
+        className={`w-full px-4 py-3.5 rounded-xl text-slate-100 text-base font-medium placeholder-slate-600 outline-none transition-all duration-200 focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500/50 border border-white/10 bg-white/[0.04] ${children ? "pr-12" : ""} ${readOnly ? "opacity-60 cursor-not-allowed" : ""}`}
       />
       {children}
     </div>
@@ -64,11 +66,15 @@ const InputField = ({
 const Register = () => {
   useVisitorTrack();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams(); // ← ADD
+  const refCode = searchParams.get("ref") || ""; // ← reads ?ref=ABC123 from URL
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     mobile: "",
     password: "",
+    referral_code: refCode, // ← ADD: pre-filled from URL
     user_wallet: "-",
     role: "user",
   });
@@ -152,7 +158,6 @@ const Register = () => {
             boxShadow: "0 24px 64px rgba(0,0,0,0.5)",
           }}
         >
-          {/* Top accent bar */}
           <div
             className="absolute top-0 left-0 right-0 h-0.5 rounded-t-3xl"
             style={{
@@ -174,7 +179,6 @@ const Register = () => {
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Full name */}
             <InputField
               label="Full Name"
               name="name"
@@ -182,8 +186,6 @@ const Register = () => {
               value={formData.name}
               onChange={handleChange}
             />
-
-            {/* Email */}
             <InputField
               label="Email Address"
               name="email"
@@ -192,8 +194,6 @@ const Register = () => {
               value={formData.email}
               onChange={handleChange}
             />
-
-            {/* Mobile */}
             <InputField
               label="Mobile Number"
               name="mobile"
@@ -202,8 +202,6 @@ const Register = () => {
               value={formData.mobile}
               onChange={handleChange}
             />
-
-            {/* Password */}
             <InputField
               label="Password"
               name="password"
@@ -221,7 +219,84 @@ const Register = () => {
               </button>
             </InputField>
 
-            {/* Terms note */}
+            {/* ── REFERRAL CODE ── */}
+            <div>
+              <label
+                className="block text-xs font-bold tracking-widest uppercase mb-2"
+                style={{
+                  color: "#94a3b8",
+                  fontFamily: "'Rajdhani',sans-serif",
+                }}
+              >
+                Referral Code{" "}
+                <span
+                  style={{
+                    color: "#475569",
+                    textTransform: "none",
+                    fontWeight: 400,
+                  }}
+                >
+                  (optional)
+                </span>
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  name="referral_code"
+                  placeholder="Enter referral code"
+                  value={formData.referral_code}
+                  onChange={handleChange}
+                  readOnly={!!refCode} // ← if from URL, lock it
+                  className="w-full px-4 py-3.5 rounded-xl text-slate-100 text-base font-medium placeholder-slate-600 outline-none transition-all duration-200 border border-white/10 bg-white/[0.04]"
+                  style={{
+                    opacity: refCode ? 1 : undefined,
+                    borderColor: refCode ? "rgba(245,158,11,0.4)" : undefined,
+                    background: refCode ? "rgba(245,158,11,0.05)" : undefined,
+                  }}
+                />
+                {/* Show badge if referral code came from URL */}
+                {refCode && (
+                  <div
+                    className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 px-2 py-1 rounded-lg"
+                    style={{
+                      background: "rgba(16,185,129,0.15)",
+                      border: "1px solid rgba(16,185,129,0.3)",
+                    }}
+                  >
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+                      <path
+                        d="M20 6L9 17l-5-5"
+                        stroke="#10b981"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                    <span
+                      className="text-xs font-bold"
+                      style={{
+                        color: "#10b981",
+                        fontFamily: "'Rajdhani',sans-serif",
+                      }}
+                    >
+                      Applied
+                    </span>
+                  </div>
+                )}
+              </div>
+              {refCode && (
+                <p
+                  className="text-xs mt-1.5"
+                  style={{
+                    color: "#10b981",
+                    fontFamily: "'Rajdhani',sans-serif",
+                  }}
+                >
+                  ✓ You were referred by a friend
+                </p>
+              )}
+            </div>
+
             <p
               className="text-xs font-medium pt-1"
               style={{ color: "#475569", fontFamily: "'Rajdhani',sans-serif" }}
@@ -237,7 +312,6 @@ const Register = () => {
               .
             </p>
 
-            {/* Submit */}
             <button
               type="submit"
               disabled={submitting}
@@ -255,7 +329,6 @@ const Register = () => {
             </button>
           </form>
 
-          {/* Divider */}
           <div className="flex items-center gap-3 my-6">
             <div
               className="flex-1 h-px"
@@ -273,7 +346,6 @@ const Register = () => {
             />
           </div>
 
-          {/* Login link */}
           <p
             className="text-center text-sm font-semibold"
             style={{ color: "#64748b", fontFamily: "'Rajdhani',sans-serif" }}
@@ -289,7 +361,6 @@ const Register = () => {
           </p>
         </div>
 
-        {/* Back to home */}
         <p className="text-center mt-6 text-xs font-semibold">
           <span
             onClick={() => navigate("/")}
