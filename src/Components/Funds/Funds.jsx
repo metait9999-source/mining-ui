@@ -7,12 +7,14 @@ import useFetchLatestDeposit from "../../hooks/useFetchLatestDeposit";
 import { useFetchUserBalance } from "../../hooks/useFetchUserBalance";
 import toast from "react-hot-toast";
 import { useUpdateUserBalance } from "../../hooks/useUpdateUserBalance";
-// import useCryptoTradeConverter from "../../hooks/userCryptoTradeConverter";
 import useSettings from "../../hooks/useSettings";
 import Decimal from "decimal.js";
 import { useSocketContext } from "../../context/SocketContext";
 import useWallets from "../../hooks/useWallets";
 import AppNav from "../Home/Navbar";
+import QRCode from "qrcode";
+
+// ─── helpers ───────────────────────────────────────────────────────────────
 
 const resolveLogoSrc = (wallet) => {
   if (!wallet) return null;
@@ -69,6 +71,110 @@ const CoinLogo = ({ wallet, size = 24 }) => {
   );
 };
 
+// ─── QR component: generates canvas from address ──────────────────────────
+
+const AddressQR = ({ address, size = 180 }) => {
+  const canvasRef = useRef(null);
+  const [dataUrl, setDataUrl] = useState(null);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    if (!address) return;
+    setError(false);
+    QRCode.toDataURL(address, {
+      width: size * 2, // 2× for retina
+      margin: 1,
+      color: { dark: "#000000", light: "#ffffff" },
+      errorCorrectionLevel: "M",
+    })
+      .then((url) => setDataUrl(url))
+      .catch(() => setError(true));
+  }, [address, size]);
+
+  if (!address) {
+    return (
+      <div
+        style={{
+          width: size,
+          height: size,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#f8f8f8",
+          borderRadius: 8,
+          fontSize: 11,
+          color: "#999",
+        }}
+      >
+        No address
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div
+        style={{
+          width: size,
+          height: size,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#f8f8f8",
+          borderRadius: 8,
+          fontSize: 10,
+          color: "#333",
+          wordBreak: "break-all",
+          padding: 8,
+          textAlign: "center",
+        }}
+      >
+        {address}
+      </div>
+    );
+  }
+  if (!dataUrl) {
+    return (
+      <div
+        style={{
+          width: size,
+          height: size,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#f8f8f8",
+          borderRadius: 8,
+        }}
+      >
+        <div
+          style={{
+            width: 28,
+            height: 28,
+            border: "3px solid #f59e0b",
+            borderTopColor: "transparent",
+            borderRadius: "50%",
+            animation: "spin 0.8s linear infinite",
+          }}
+        />
+      </div>
+    );
+  }
+  return (
+    <img
+      src={dataUrl}
+      alt="Deposit QR"
+      style={{
+        width: size,
+        height: size,
+        display: "block",
+        borderRadius: 8,
+        objectFit: "contain",
+      }}
+    />
+  );
+};
+
+// ─── styles ────────────────────────────────────────────────────────────────
+
 const inputWrap = {
   display: "flex",
   alignItems: "center",
@@ -91,6 +197,8 @@ const labelStyle = {
   fontFamily: "'Rajdhani',sans-serif",
 };
 
+// ─── address resolver ─────────────────────────────────────────────────────
+
 function getDepositAddress(addresses, coinId) {
   if (!addresses || !coinId) return null;
   switch (coinId) {
@@ -107,6 +215,8 @@ function getDepositAddress(addresses, coinId) {
   }
 }
 
+// ─── main component ───────────────────────────────────────────────────────
+
 const Funds = () => {
   const location = useLocation();
   const wallet = location.state?.wallet;
@@ -115,7 +225,7 @@ const Funds = () => {
   const [activeTab, setActiveTab] = useState("receive");
   const [timeLeft, setTimeLeft] = useState(null);
   const [rechargeModal, setRechargeModal] = useState(false);
-  const [rechargeStep, setRechargeStep] = useState(1); // 1=enter amount, 2=verifying, 3=success/pending
+  const [rechargeStep, setRechargeStep] = useState(1);
   const [rechargeResult, setRechargeResult] = useState(null);
   const [amount, setAmount] = useState("");
   const [withdrawAmount, setWithdrawAmount] = useState("");
@@ -132,7 +242,7 @@ const Funds = () => {
   const [screenshot, setScreenshot] = useState(null);
   const [preview, setPreview] = useState(null);
 
-  // fetch user's unique deposit addresses
+  // user-specific deposit addresses
   const [depositAddresses, setDepositAddresses] = useState(null);
   useEffect(() => {
     if (!user?.id) return;
@@ -171,7 +281,6 @@ const Funds = () => {
     coinPriceRef.current = null;
   }, [wallet?.coin_symbol]);
 
-  // coinlore numeric IDs
   const COINLORE_IDS = {
     TRX: 87,
     ETH: 80,
@@ -183,9 +292,7 @@ const Funds = () => {
 
   const getConvertedAmount = useCallback(async () => {
     if (!balance?.coin_amount || !wallet?.coin_id) return;
-
     const symbol = wallet?.coin_symbol?.toUpperCase();
-
     if (
       ["USDT", "USDT-TRC20", "USDT-ERC20"].includes(symbol) ||
       ["USDT", "USDT-TRC20", "USDT-ERC20"].includes(wallet?.coin_id)
@@ -193,24 +300,21 @@ const Funds = () => {
       setAvailableBalance(parseFloat(balance.coin_amount).toFixed(4));
       return;
     }
-
     const coinloreId = COINLORE_IDS[symbol] || COINLORE_IDS[wallet?.coin_id];
     if (!coinloreId) {
       setAvailableBalance(parseFloat(balance.coin_amount).toFixed(8));
       return;
     }
-
     try {
       const res = await fetch(
         `https://api.coinlore.net/api/ticker/?id=${coinloreId}`,
       );
       const data = await res.json();
       const price = parseFloat(data?.[0]?.price_usd || 0);
-
       if (price > 0) {
-        // DB তে USD আছে, coin এ convert করো
-        const coinAmount = parseFloat(balance.coin_amount) / price;
-        setAvailableBalance(coinAmount.toFixed(8));
+        setAvailableBalance(
+          (parseFloat(balance.coin_amount) / price).toFixed(8),
+        );
       } else {
         setAvailableBalance("0.00000000");
       }
@@ -416,7 +520,6 @@ const Funds = () => {
       coinSymbol === "USDT"
         ? displayBalance
         : parseFloat(availableBalance || 0);
-
     if (coinAmt > maxAvailable) {
       toast.error("Exceeds available balance");
       return;
@@ -521,14 +624,10 @@ const Funds = () => {
   const tabColor = { receive: "#f59e0b", send: "#10b981", convert: "#3b82f6" };
   const activeColor = tabColor[activeTab];
 
-  // coin amount display (e.g. if USDT coin_amount IS the usd amount)
   const coinAmountDisplay = (() => {
-    if (coinSymbol === "USDT") {
-      return `${displayBalance.toFixed(4)} USDT`;
-    }
-    if (availableBalance && parseFloat(availableBalance) > 0) {
+    if (coinSymbol === "USDT") return `${displayBalance.toFixed(4)} USDT`;
+    if (availableBalance && parseFloat(availableBalance) > 0)
       return `${availableBalance} ${coinSymbol}`;
-    }
     return `${displayBalance.toFixed(4)} ${coinSymbol}`;
   })();
 
@@ -605,7 +704,6 @@ const Funds = () => {
                   "linear-gradient(90deg,transparent,#f59e0b,#f97316,transparent)",
               }}
             />
-
             <div className="relative z-10 p-6 md:p-8 lg:p-10">
               <div className="flex flex-col lg:flex-row lg:items-center gap-6 lg:gap-12">
                 <div className="flex-1 min-w-0">
@@ -658,7 +756,6 @@ const Funds = () => {
                       USD
                     </span>
                   </div>
-                  {/* coin amount */}
                   <p
                     className="raj font-semibold text-sm mb-3"
                     style={{ color: "#f59e0b" }}
@@ -883,7 +980,6 @@ const Funds = () => {
                 {/* ══════════ RECEIVE TAB ══════════ */}
                 {activeTab === "receive" && (
                   <div className="p-6 md:p-8">
-                    {/* Timer */}
                     {timeLeft && (
                       <div
                         className="flex items-center gap-4 p-4 rounded-2xl mb-6"
@@ -1040,14 +1136,13 @@ const Funds = () => {
                             </span>
                           </div>
                         )}
-
-                        {/* ── HOW TO DEPOSIT STEPS ── */}
                       </div>
 
-                      {/* Right: QR */}
+                      {/* Right: GENERATED QR from depositAddress */}
                       <div className="flex flex-col items-center">
                         {depositAddress ? (
                           <>
+                            {/* QR container — click to enlarge */}
                             <div
                               className="p-3 rounded-2xl mb-4 cursor-pointer"
                               style={{
@@ -1056,39 +1151,7 @@ const Funds = () => {
                               }}
                               onClick={() => setQrModalVisible(true)}
                             >
-                              {wallet?.wallet_qr ? (
-                                <img
-                                  src={`${API_BASE_URL}/${wallet.wallet_qr}`}
-                                  alt={coinSymbol}
-                                  style={{
-                                    width: 180,
-                                    height: 180,
-                                    objectFit: "contain",
-                                    display: "block",
-                                    borderRadius: 8,
-                                  }}
-                                />
-                              ) : (
-                                <div
-                                  style={{
-                                    width: 180,
-                                    height: 180,
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    background: "#f8f8f8",
-                                    borderRadius: 8,
-                                    fontFamily: "monospace",
-                                    fontSize: 9,
-                                    color: "#333",
-                                    padding: 8,
-                                    wordBreak: "break-all",
-                                    textAlign: "center",
-                                  }}
-                                >
-                                  {depositAddress}
-                                </div>
-                              )}
+                              <AddressQR address={depositAddress} size={180} />
                             </div>
                             <p
                               className="raj text-xs mb-4"
@@ -1116,7 +1179,7 @@ const Funds = () => {
                       </div>
                     </div>
 
-                    {/* ── BIG RECHARGE BUTTON ── */}
+                    {/* BIG RECHARGE BUTTON */}
                     <div
                       className="mt-6 pt-6"
                       style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
@@ -1661,7 +1724,6 @@ const Funds = () => {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* handle — mobile */}
             <div className="flex justify-center pt-3 pb-1 md:hidden">
               <div
                 className="w-10 h-1 rounded-full"
@@ -1676,7 +1738,6 @@ const Funds = () => {
               }}
             />
 
-            {/* ── STEP 1: Enter amount ── */}
             {rechargeStep === 1 && (
               <div className="p-6 slide-up">
                 <div className="flex items-center justify-between mb-6">
@@ -1731,7 +1792,6 @@ const Funds = () => {
                   </button>
                 </div>
 
-                {/* Deposit info */}
                 <div className="flex flex-col gap-2 mb-5">
                   {[
                     { lbl: "Coin", val: wallet?.coin_symbol },
@@ -1767,7 +1827,6 @@ const Funds = () => {
                   ))}
                 </div>
 
-                {/* Amount input */}
                 <div className="mb-2">
                   <div className="flex items-center justify-between mb-2">
                     <label style={labelStyle}>Amount You Sent</label>
@@ -1891,7 +1950,6 @@ const Funds = () => {
                   )}
                 </div>
 
-                {/* Warning */}
                 <div
                   className="my-4 p-3 rounded-xl flex items-start gap-2"
                   style={{
@@ -1939,7 +1997,6 @@ const Funds = () => {
               </div>
             )}
 
-            {/* ── STEP 2: Verifying ── */}
             {rechargeStep === 2 && (
               <div
                 className="p-8 flex flex-col items-center justify-center slide-up"
@@ -1992,7 +2049,6 @@ const Funds = () => {
               </div>
             )}
 
-            {/* ── STEP 3: Result ── */}
             {rechargeStep === 3 && rechargeResult && (
               <div className="p-6 slide-up">
                 <div className="flex flex-col items-center mb-6">
@@ -2079,8 +2135,6 @@ const Funds = () => {
                     </>
                   )}
                 </div>
-
-                {/* Result details */}
                 <div className="flex flex-col gap-2 mb-6">
                   {rechargeResult.status === "approved" && (
                     <>
@@ -2146,7 +2200,6 @@ const Funds = () => {
                     </div>
                   )}
                 </div>
-
                 <button
                   onClick={closeRechargeModal}
                   className="act w-full py-4 rounded-2xl raj font-black text-sm border-none cursor-pointer"
@@ -2164,7 +2217,7 @@ const Funds = () => {
         </div>
       )}
 
-      {/* ══════════ QR FULLSCREEN ══════════ */}
+      {/* ══════════ QR FULLSCREEN MODAL — generated from address ══════════ */}
       {qrModalVisible && (
         <div
           className="fixed inset-0 z-50 flex flex-col items-center justify-center"
@@ -2195,7 +2248,7 @@ const Funds = () => {
             className="raj font-semibold text-sm mb-5"
             style={{ color: "rgba(255,255,255,0.5)" }}
           >
-            Long press to save
+            Scan to deposit {coinSymbol}
           </p>
           <div
             className="p-4 rounded-3xl"
@@ -2203,45 +2256,21 @@ const Funds = () => {
               background: "white",
               boxShadow: "0 16px 64px rgba(245,158,11,0.25)",
             }}
+            onClick={(e) => e.stopPropagation()}
           >
-            {wallet?.wallet_qr ? (
-              <img
-                src={`${API_BASE_URL}/${wallet?.wallet_qr}`}
-                alt={coinSymbol}
-                onClick={(e) => e.stopPropagation()}
-                style={{
-                  width: "min(72vw,300px)",
-                  height: "min(72vw,300px)",
-                  borderRadius: 12,
-                  objectFit: "contain",
-                  display: "block",
-                }}
-              />
-            ) : (
-              <div
-                onClick={(e) => e.stopPropagation()}
-                style={{
-                  width: "min(72vw,300px)",
-                  height: "min(72vw,300px)",
-                  borderRadius: 12,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontFamily: "monospace",
-                  fontSize: 11,
-                  color: "#333",
-                  padding: 16,
-                  wordBreak: "break-all",
-                  textAlign: "center",
-                }}
-              >
-                {depositAddress}
-              </div>
-            )}
+            <AddressQR address={depositAddress} size={280} />
           </div>
+          {depositAddress && (
+            <p
+              className="raj text-xs mt-4 px-8 text-center break-all"
+              style={{ color: "rgba(255,255,255,0.3)", maxWidth: 320 }}
+            >
+              {depositAddress}
+            </p>
+          )}
           <p
-            className="raj text-xs mt-5"
-            style={{ color: "rgba(255,255,255,0.25)" }}
+            className="raj text-xs mt-3"
+            style={{ color: "rgba(255,255,255,0.2)" }}
           >
             Tap outside to close
           </p>
