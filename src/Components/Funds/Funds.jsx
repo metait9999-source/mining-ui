@@ -128,8 +128,9 @@ const Funds = () => {
   const [convertedResult, setConvertedResult] = useState("0.00");
   const [isConverting, setIsConverting] = useState(false);
   const [qrModalVisible, setQrModalVisible] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   const [addressCopied, setAddressCopied] = useState(false);
+  const [screenshot, setScreenshot] = useState(null);
+  const [preview, setPreview] = useState(null);
 
   // fetch user's unique deposit addresses
   const [depositAddresses, setDepositAddresses] = useState(null);
@@ -274,34 +275,33 @@ const Funds = () => {
 
   const handleRechargeSubmit = async (e) => {
     e.preventDefault();
-    if (submitting) return;
-    if (!amount || parseFloat(amount) <= 0) {
-      toast.error("Please enter amount");
+    setLoading(true);
+    if (!amount) {
+      toast.error("Please provide amount");
+      setLoading(false);
       return;
     }
-    if (!depositAddress) {
-      toast.error("Deposit address not loaded");
-      return;
-    }
-
-    setSubmitting(true);
-
+    const formData = new FormData();
+    formData.append("user_id", user.id);
+    formData.append("wallet_to", wallet?.wallet_address);
+    formData.append("wallet_from", user?.user_wallet);
+    formData.append("coin_id", wallet?.coin_id);
+    formData.append("trans_hash", "#ex3j3h2sh");
+    formData.append("amount", amount);
+    formData.append("documents", screenshot);
     try {
-      await axios.post(`${API_BASE_URL}/deposits`, {
-        user_id: user.id,
-        coin_id: wallet?.coin_id,
-        amount: Number(amount),
+      await axios.post(`${API_BASE_URL}/deposits`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
-
-      toast.success(
-        "✅ Deposit request submitted! We'll credit once confirmed.",
-      );
+      setLoading(false);
+      setAmount("");
+      setScreenshot(null);
+      setPreview(null);
       refetch();
-      closeRechargeModal();
+      setRechargeModal(false);
     } catch (err) {
-      toast.error(err?.response?.data?.error || "Submission failed");
-    } finally {
-      setSubmitting(false);
+      toast.error(err?.response?.data?.error || "Failed to deposit request");
+      setLoading(false);
     }
   };
 
@@ -309,6 +309,8 @@ const Funds = () => {
     setRechargeModal(false);
     setRechargeStep(1);
     setAmount("");
+    setScreenshot(null);
+    setPreview(null);
     setRechargeResult(null);
   };
 
@@ -1776,6 +1778,81 @@ const Funds = () => {
                   )}
                 </div>
 
+                <div className="mb-2 mt-4">
+                  <label style={labelStyle}>
+                    Transaction Screenshot (Optional)
+                  </label>
+                  <label
+                    className="flex flex-col items-center justify-center gap-2 py-5 rounded-2xl cursor-pointer"
+                    style={{
+                      background: preview
+                        ? "transparent"
+                        : "rgba(255,255,255,0.02)",
+                      border: `1px dashed ${preview ? "rgba(16,185,129,0.3)" : "rgba(255,255,255,0.1)"}`,
+                      overflow: "hidden",
+                    }}
+                  >
+                    {preview ? (
+                      <img
+                        src={preview}
+                        alt="screenshot"
+                        style={{
+                          width: "100%",
+                          maxHeight: 160,
+                          objectFit: "contain",
+                          borderRadius: 10,
+                        }}
+                      />
+                    ) : (
+                      <>
+                        <svg
+                          width="22"
+                          height="22"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                        >
+                          <path
+                            d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"
+                            stroke="#475569"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                        <p
+                          className="raj font-semibold text-xs"
+                          style={{ color: "#475569" }}
+                        >
+                          Tap to upload screenshot
+                        </p>
+                      </>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={{ display: "none" }}
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (!file) return;
+                        setScreenshot(file);
+                        setPreview(URL.createObjectURL(file));
+                      }}
+                    />
+                  </label>
+                  {preview && (
+                    <button
+                      onClick={() => {
+                        setScreenshot(null);
+                        setPreview(null);
+                      }}
+                      className="raj font-semibold text-xs mt-2 w-full text-center border-none cursor-pointer"
+                      style={{ background: "none", color: "#ef4444" }}
+                    >
+                      Remove screenshot
+                    </button>
+                  )}
+                </div>
+
                 {/* Warning */}
                 <div
                   className="my-4 p-3 rounded-xl flex items-start gap-2"
@@ -1797,7 +1874,7 @@ const Funds = () => {
 
                 <button
                   onClick={handleRechargeSubmit}
-                  disabled={submitting || !amount}
+                  disabled={!amount}
                   className="act w-full py-4 rounded-2xl raj font-black text-sm border-none cursor-pointer"
                   style={{
                     background:
