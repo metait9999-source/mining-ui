@@ -858,11 +858,12 @@ const ArbitragePage = ({
     (w) => w.coin_symbol?.toUpperCase() === selectedCoin,
   );
   const maxBalance = parseFloat(selectedWallet?.coin_amount || 0);
+  const enteredAmount = parseFloat(amount) || 0;
   const expectedEarnings =
     pkg && amount
       ? ((parseFloat(amount) * parseFloat(pkg.daily_rate_min)) / 100).toFixed(2)
       : "0.00";
-  const insufficient = parseFloat(amount) > maxBalance;
+  const insufficient = enteredAmount > maxBalance && enteredAmount > 0;
 
   const BENEFITS = [
     "Daily income credited to your USDT, BTC, or ETH wallet",
@@ -908,7 +909,13 @@ const ArbitragePage = ({
       (w) => w.coin_symbol?.toUpperCase() === selectedCoin,
     );
     if (w)
-      navigate("/funds", { state: { wallet: w, coinAmount: w.coin_amount } });
+      navigate("/funds", {
+        state: {
+          wallet: w,
+          coinAmount: w.coin_amount,
+          returnTo: "/arbitrage",
+        },
+      });
     else toast.error("Wallet not found");
   };
 
@@ -1123,7 +1130,8 @@ const ArbitragePage = ({
                 className="flex items-center justify-between px-4 py-3 rounded-2xl"
                 style={{
                   background: "rgba(255,255,255,0.02)",
-                  border: "1px solid rgba(255,255,255,0.06)",
+                  border: `1px solid ${maxBalance <= 0 ? "rgba(239,68,68,0.15)" : "rgba(255,255,255,0.06)"}`,
+                  transition: "border-color .2s",
                 }}
               >
                 <span
@@ -1135,9 +1143,9 @@ const ArbitragePage = ({
                 <div className="flex items-center gap-2.5">
                   <span
                     className="orb font-black text-sm"
-                    style={{ color: maxBalance > 0 ? "#f1f5f9" : "#334155" }}
+                    style={{ color: maxBalance > 0 ? "#f1f5f9" : "#ef4444" }}
                   >
-                    {maxBalance.toFixed(4)}
+                    {maxBalance}
                   </span>
                   {maxBalance <= 0 ? (
                     <button
@@ -1211,23 +1219,52 @@ const ArbitragePage = ({
                   </span>
                 </div>
                 {insufficient ? (
-                  <div className="flex items-center justify-between mt-2">
-                    <p
-                      className="raj font-semibold text-xs"
-                      style={{ color: "#ef4444" }}
-                    >
-                      Insufficient balance
-                    </p>
+                  <div
+                    className="mt-2 rounded-2xl px-4 py-3 flex items-center justify-between gap-3"
+                    style={{
+                      background: "rgba(239,68,68,0.07)",
+                      border: "1px solid rgba(239,68,68,0.2)",
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                      >
+                        <circle
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="#ef4444"
+                          strokeWidth="2"
+                        />
+                        <path
+                          d="M12 8v4M12 16h.01"
+                          stroke="#ef4444"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                      <p
+                        className="raj font-semibold text-xs"
+                        style={{ color: "#ef4444" }}
+                      >
+                        Insufficient {selectedCoin} balance
+                      </p>
+                    </div>
                     <button
                       onClick={handleRecharge}
-                      className="raj font-bold text-xs px-3 py-1.5 rounded-lg border-none cursor-pointer act"
+                      className="raj font-black text-xs px-4 py-2 rounded-xl border-none cursor-pointer act flex-shrink-0"
                       style={{
-                        background: "rgba(239,68,68,0.1)",
-                        color: "#ef4444",
-                        border: "1px solid rgba(239,68,68,0.2)",
+                        background: "linear-gradient(135deg,#f59e0b,#f97316)",
+                        color: "#080810",
+                        letterSpacing: 1,
+                        boxShadow: "0 4px 14px rgba(245,158,11,0.3)",
                       }}
                     >
-                      RECHARGE
+                      + RECHARGE
                     </button>
                   </div>
                 ) : (
