@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import axios from "axios";
-import { Link, useNavigate, useSearchParams } from "react-router-dom"; // ← ADD useSearchParams
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { API_BASE_URL } from "../../api/getApiURL";
 import { toast } from "react-toastify";
 import { useVisitorTrack } from "../../hooks/useVisitorTrack";
@@ -29,52 +29,18 @@ const EyeIcon = ({ open }) =>
     </svg>
   );
 
-const InputField = ({
-  label,
-  name,
-  type = "text",
-  placeholder,
-  value,
-  onChange,
-  required = true,
-  readOnly = false,
-  children,
-}) => (
-  <div>
-    <label
-      className="block text-xs font-bold tracking-widest uppercase mb-2"
-      style={{ color: "#94a3b8", fontFamily: "'Rajdhani',sans-serif" }}
-    >
-      {label}
-    </label>
-    <div className="relative">
-      <input
-        type={type}
-        name={name}
-        placeholder={placeholder}
-        value={value}
-        onChange={onChange}
-        required={required}
-        readOnly={readOnly}
-        className={`w-full px-4 py-3.5 rounded-xl text-slate-100 text-base font-medium placeholder-slate-600 outline-none transition-all duration-200 focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500/50 border border-white/10 bg-white/[0.04] ${children ? "pr-12" : ""} ${readOnly ? "opacity-60 cursor-not-allowed" : ""}`}
-      />
-      {children}
-    </div>
-  </div>
-);
-
 const Register = () => {
   useVisitorTrack();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams(); // ← ADD
-  const refCode = searchParams.get("ref") || ""; // ← reads ?ref=ABC123 from URL
+  const [searchParams] = useSearchParams();
+  const refCode = searchParams.get("ref") || "";
 
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     mobile: "",
     password: "",
-    referral_code: refCode, // ← ADD: pre-filled from URL
+    referral_code: refCode,
     user_wallet: "-",
     role: "user",
   });
@@ -179,47 +145,128 @@ const Register = () => {
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <InputField
-              label="Full Name"
-              name="name"
-              placeholder="Your full name"
-              value={formData.name}
-              onChange={handleChange}
-            />
-            <InputField
-              label="Email Address"
-              name="email"
-              type="email"
-              placeholder="you@example.com"
-              value={formData.email}
-              onChange={handleChange}
-            />
-            <InputField
-              label="Mobile Number"
-              name="mobile"
-              type="tel"
-              placeholder="+1 234 567 8900"
-              value={formData.mobile}
-              onChange={handleChange}
-            />
-            <InputField
-              label="Password"
-              name="password"
-              type={showPass ? "text" : "password"}
-              placeholder="••••••••"
-              value={formData.password}
-              onChange={handleChange}
-            >
-              <button
-                type="button"
-                onClick={() => setShowPass((p) => !p)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-amber-400 transition-colors duration-200 bg-transparent border-none cursor-pointer"
+            {/* Full Name */}
+            <div>
+              <label
+                className="block text-xs font-bold tracking-widest uppercase mb-2"
+                style={{
+                  color: "#94a3b8",
+                  fontFamily: "'Rajdhani',sans-serif",
+                }}
               >
-                <EyeIcon open={showPass} />
-              </button>
-            </InputField>
+                Full Name
+              </label>
+              <input
+                type="text"
+                name="name"
+                placeholder="Your full name"
+                value={formData.name}
+                onChange={handleChange}
+                required
+                autoComplete="name"
+                className="w-full px-4 py-3.5 rounded-xl text-slate-100 text-base font-medium placeholder-slate-600 outline-none transition-all duration-200 focus:ring-2 focus:ring-amber-500/30 border border-white/10 bg-white/[0.04]"
+              />
+            </div>
 
-            {/* ── REFERRAL CODE ── */}
+            {/* Email */}
+            <div>
+              <label
+                className="block text-xs font-bold tracking-widest uppercase mb-2"
+                style={{
+                  color: "#94a3b8",
+                  fontFamily: "'Rajdhani',sans-serif",
+                }}
+              >
+                Email Address
+              </label>
+              <input
+                type="email"
+                name="email"
+                placeholder="you@example.com"
+                value={formData.email}
+                onChange={handleChange}
+                required
+                autoComplete="email"
+                className="w-full px-4 py-3.5 rounded-xl text-slate-100 text-base font-medium placeholder-slate-600 outline-none transition-all duration-200 focus:ring-2 focus:ring-amber-500/30 border border-white/10 bg-white/[0.04]"
+              />
+            </div>
+
+            {/* Mobile — type text + inputMode tel keeps numeric keyboard
+                but stops browser treating it as a credential field      */}
+            <div>
+              <label
+                className="block text-xs font-bold tracking-widest uppercase mb-2"
+                style={{
+                  color: "#94a3b8",
+                  fontFamily: "'Rajdhani',sans-serif",
+                }}
+              >
+                Mobile Number
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                name="mobile"
+                placeholder="+1 234 567 8900"
+                value={formData.mobile}
+                onChange={handleChange}
+                required
+                autoComplete="off"
+                className="w-full px-4 py-3.5 rounded-xl text-slate-100 text-base font-medium placeholder-slate-600 outline-none transition-all duration-200 focus:ring-2 focus:ring-amber-500/30 border border-white/10 bg-white/[0.04]"
+              />
+            </div>
+
+            <input
+              type="email"
+              name="email_hint"
+              value={formData.email}
+              onChange={() => {}}
+              autoComplete="email"
+              readOnly
+              tabIndex={-1}
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                opacity: 0,
+                height: 0,
+                width: 0,
+                pointerEvents: "none",
+              }}
+            />
+
+            {/* Password */}
+            <div>
+              <label
+                className="block text-xs font-bold tracking-widest uppercase mb-2"
+                style={{
+                  color: "#94a3b8",
+                  fontFamily: "'Rajdhani',sans-serif",
+                }}
+              >
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showPass ? "text" : "password"}
+                  name="password"
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                  autoComplete="new-password"
+                  className="w-full px-4 py-3.5 pr-12 rounded-xl text-slate-100 text-base font-medium placeholder-slate-600 outline-none transition-all duration-200 focus:ring-2 focus:ring-amber-500/30 border border-white/10 bg-white/[0.04]"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPass((p) => !p)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-amber-400 transition-colors duration-200 bg-transparent border-none cursor-pointer"
+                >
+                  <EyeIcon open={showPass} />
+                </button>
+              </div>
+            </div>
+
+            {/* Referral Code */}
             <div>
               <label
                 className="block text-xs font-bold tracking-widest uppercase mb-2"
@@ -246,15 +293,14 @@ const Register = () => {
                   placeholder="Enter referral code"
                   value={formData.referral_code}
                   onChange={handleChange}
-                  readOnly={!!refCode} // ← if from URL, lock it
+                  readOnly={!!refCode}
+                  autoComplete="off"
                   className="w-full px-4 py-3.5 rounded-xl text-slate-100 text-base font-medium placeholder-slate-600 outline-none transition-all duration-200 border border-white/10 bg-white/[0.04]"
                   style={{
-                    opacity: refCode ? 1 : undefined,
                     borderColor: refCode ? "rgba(245,158,11,0.4)" : undefined,
                     background: refCode ? "rgba(245,158,11,0.05)" : undefined,
                   }}
                 />
-                {/* Show badge if referral code came from URL */}
                 {refCode && (
                   <div
                     className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 px-2 py-1 rounded-lg"
