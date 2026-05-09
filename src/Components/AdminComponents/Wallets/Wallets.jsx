@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { API_BASE_URL } from "../../../api/getApiURL";
 import { Link } from "react-router-dom";
-import axios from "axios";
-import toast from "react-hot-toast";
-import DeleteModal from "../DeleteModal/DeleteModal";
+// import axios from "axios";
+// import toast from "react-hot-toast";
+// import DeleteModal from "../DeleteModal/DeleteModal";
 import { useUser } from "../../../context/UserContext";
 import { FaWallet } from "react-icons/fa";
-import { FiPlus, FiEdit2, FiTrash2 } from "react-icons/fi";
+import { FiPlus, FiEdit2 } from "react-icons/fi";
 
 // Resolves coin_logo to a displayable URL (uploaded file or external CDN)
 const resolveLogoSrc = (coinLogo) => {
@@ -18,8 +18,8 @@ const resolveLogoSrc = (coinLogo) => {
 const Wallets = () => {
   const [wallets, setWallets] = useState([]);
   const { setLoading } = useUser();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedWalletId, setSelectedWalletId] = useState(null);
+  // const [isModalOpen, setIsModalOpen] = useState(false);
+  // const [selectedWalletId, setSelectedWalletId] = useState(null);
 
   useEffect(() => {
     const fetchWalletInfo = async () => {
@@ -39,28 +39,28 @@ const Wallets = () => {
     fetchWalletInfo();
   }, [setLoading]);
 
-  const handleDelete = async (walletID) => {
-    try {
-      await axios.delete(`${API_BASE_URL}/wallets/${walletID}`);
-      setWallets((prev) => prev.filter((w) => w.id !== walletID));
-      toast.success("Wallet deleted successfully");
-    } catch {
-      toast.error("Delete failed");
-    }
-  };
+  // const handleDelete = async (walletID) => {
+  //   try {
+  //     await axios.delete(`${API_BASE_URL}/wallets/${walletID}`);
+  //     setWallets((prev) => prev.filter((w) => w.id !== walletID));
+  //     toast.success("Wallet deleted successfully");
+  //   } catch {
+  //     toast.error("Delete failed");
+  //   }
+  // };
 
-  const openModal = (walletID) => {
-    setSelectedWalletId(walletID);
-    setIsModalOpen(true);
-  };
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setSelectedWalletId(null);
-  };
-  const confirmDelete = () => {
-    if (selectedWalletId) handleDelete(selectedWalletId);
-    closeModal();
-  };
+  // const openModal = (walletID) => {
+  //   setSelectedWalletId(walletID);
+  //   // setIsModalOpen(true);
+  // };
+  // const closeModal = () => {
+  //   // setIsModalOpen(false);
+  //   setSelectedWalletId(null);
+  // };
+  // const confirmDelete = () => {
+  //   if (selectedWalletId) handleDelete(selectedWalletId);
+  //   closeModal();
+  // };
 
   return (
     <div className="flex flex-col gap-5">
@@ -231,13 +231,13 @@ const Wallets = () => {
                             Edit
                           </button>
                         </Link>
-                        <button
+                        {/* <button
                           onClick={() => openModal(wallet.id)}
                           className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-red-50 text-red-500 border border-red-200 hover:bg-red-100 transition-colors"
                         >
                           <FiTrash2 size={11} />
                           Delete
-                        </button>
+                        </button> */}
                       </div>
                     </td>
                   </tr>
@@ -248,13 +248,13 @@ const Wallets = () => {
         </div>
       </div>
 
-      <DeleteModal
+      {/* <DeleteModal
         isOpen={isModalOpen}
         onClose={closeModal}
         onConfirm={confirmDelete}
         title="Wallet"
         description="This action cannot be undone."
-      />
+      /> */}
     </div>
   );
 };

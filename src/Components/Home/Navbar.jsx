@@ -58,12 +58,10 @@ const NAV_LINKS = [
   { label: "Mining", to: "/mining" },
   { label: "Arbitrage", to: "/arbitrage" },
   { label: "Wallet", to: "/account" },
-];
-
-const MORE_LINKS = [
-  { label: "Transactions", to: "/transaction" },
   { label: "Referral", to: "/referral" },
 ];
+
+const MORE_LINKS = [{ label: "Transactions", to: "/transaction" }];
 
 const SETTINGS_LINKS = [
   { label: "Profile", to: "/profile" },

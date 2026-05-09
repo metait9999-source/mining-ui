@@ -68,16 +68,6 @@ const Icons = {
       />
     </svg>
   ),
-  loan: (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-      <path
-        d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-    </svg>
-  ),
   tx: (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
       <path
@@ -182,9 +172,9 @@ const QUICK = [
     c2: "#6366f1",
   },
   {
-    label: "Transactions",
-    to: "/transaction",
-    icon: Icons.tx,
+    label: "Referral",
+    to: "/referral",
+    icon: Icons.globe,
     c1: "#14b8a6",
     c2: "#0891b2",
   },

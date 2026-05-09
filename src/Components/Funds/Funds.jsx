@@ -14,7 +14,14 @@ import useWallets from "../../hooks/useWallets";
 import AppNav from "../Home/Navbar";
 import QRCode from "qrcode";
 
-// ─── helpers ───────────────────────────────────────────────────────────────
+const COINLORE_IDS = {
+  TRX: 2713,
+  ETH: 80,
+  BTC: 90,
+  USDT: 518,
+  "USDT-TRC20": 518,
+  "USDT-ERC20": 518,
+};
 
 const resolveLogoSrc = (wallet) => {
   if (!wallet) return null;
@@ -74,7 +81,6 @@ const CoinLogo = ({ wallet, size = 24 }) => {
 // ─── QR component: generates canvas from address ──────────────────────────
 
 const AddressQR = ({ address, size = 180 }) => {
-  const canvasRef = useRef(null);
   const [dataUrl, setDataUrl] = useState(null);
   const [error, setError] = useState(false);
 
@@ -241,6 +247,9 @@ const Funds = () => {
   const [addressCopied, setAddressCopied] = useState(false);
   const [screenshot, setScreenshot] = useState(null);
   const [preview, setPreview] = useState(null);
+  const [modalUsdPreview, setModalUsdPreview] = useState(null);
+  const [modalPriceLoading, setModalPriceLoading] = useState(false);
+  const modalPriceRef = useRef(null);
 
   // user-specific deposit addresses
   const [depositAddresses, setDepositAddresses] = useState(null);
@@ -281,15 +290,6 @@ const Funds = () => {
     coinPriceRef.current = null;
   }, [wallet?.coin_symbol]);
 
-  const COINLORE_IDS = {
-    TRX: 87,
-    ETH: 80,
-    BTC: 90,
-    USDT: 518,
-    "USDT-TRC20": 518,
-    "USDT-ERC20": 518,
-  };
-
   const getConvertedAmount = useCallback(async () => {
     if (!balance?.coin_amount || !wallet?.coin_id) return;
     const symbol = wallet?.coin_symbol?.toUpperCase();
@@ -313,10 +313,10 @@ const Funds = () => {
       const price = parseFloat(data?.[0]?.price_usd || 0);
       if (price > 0) {
         setAvailableBalance(
-          (parseFloat(balance.coin_amount) / price).toFixed(8),
+          (parseFloat(balance.coin_amount) * price).toFixed(2),
         );
       } else {
-        setAvailableBalance("0.00000000");
+        setAvailableBalance("0.00");
       }
     } catch {
       setAvailableBalance("0.00000000");
@@ -620,6 +620,9 @@ const Funds = () => {
   }, [socket, wallet?.coin_id, refetch, refetchUserBalance]);
 
   const coinSymbol = wallet?.coin_symbol || "BTC";
+  const isStablecoin =
+    ["USDT", "USDT-TRC20", "USDT-ERC20"].includes(coinSymbol) ||
+    ["USDT", "USDT-TRC20", "USDT-ERC20"].includes(wallet?.coin_id);
   const TABS = ["receive", "send", "convert"];
   const tabColor = { receive: "#f59e0b", send: "#10b981", convert: "#3b82f6" };
   const activeColor = tabColor[activeTab];
@@ -630,6 +633,48 @@ const Funds = () => {
       return `${availableBalance} ${coinSymbol}`;
     return `${displayBalance.toFixed(4)} ${coinSymbol}`;
   })();
+
+  // Fetch live price when modal opens
+  useEffect(() => {
+    if (!rechargeModal) return;
+    const symbol = wallet?.coin_symbol?.toUpperCase();
+    if (!symbol) return;
+    if (isStablecoin) {
+      modalPriceRef.current = 1;
+      return;
+    }
+    const coinloreId = COINLORE_IDS[symbol] || COINLORE_IDS[wallet?.coin_id];
+    if (!coinloreId) {
+      modalPriceRef.current = null;
+      return;
+    }
+    setModalPriceLoading(true);
+    fetch(`https://api.coinlore.net/api/ticker/?id=${coinloreId}`)
+      .then((r) => r.json())
+      .then((data) => {
+        modalPriceRef.current = parseFloat(data?.[0]?.price_usd || 0) || null;
+      })
+      .catch(() => {
+        modalPriceRef.current = null;
+      })
+      .finally(() => setModalPriceLoading(false));
+  }, [rechargeModal, wallet?.coin_symbol, wallet?.coin_id]);
+
+  useEffect(() => {
+    if (!amount || parseFloat(amount) <= 0) {
+      setModalUsdPreview(null);
+      return;
+    }
+    // Don't calculate while price is still loading
+    if (modalPriceLoading) return;
+
+    const price = modalPriceRef.current;
+    if (!price) {
+      setModalUsdPreview(null);
+      return;
+    }
+    setModalUsdPreview((parseFloat(amount) * price).toFixed(2));
+  }, [amount, modalPriceLoading]);
 
   return (
     <div
@@ -667,7 +712,7 @@ const Funds = () => {
 
       <div className="px-4 md:px-8 lg:px-16 max-w-screen-xl mx-auto">
         {/* BALANCE HERO */}
-        <div className="mt-6 fup">
+        <div className="fup">
           <div
             className="relative rounded-3xl overflow-hidden"
             style={{
@@ -796,7 +841,6 @@ const Funds = () => {
                       val: coinAmountDisplay,
                       color: "#3b82f6",
                     },
-                    { lbl: "Frozen", val: "$0.00", color: "#64748b" },
                   ].map((s) => (
                     <div
                       key={s.lbl}
@@ -828,8 +872,8 @@ const Funds = () => {
         </div>
 
         {/* MAIN CONTENT */}
-        <div className="mt-8 fup2">
-          <div className="flex flex-col lg:flex-row gap-6">
+        <div className="mt-4 fup2">
+          <div className="flex flex-col lg:flex-row md:gap-6">
             {/* Tabs */}
             <div className="lg:w-52 flex-shrink-0">
               <div className="hidden lg:flex flex-col gap-2">
@@ -979,7 +1023,7 @@ const Funds = () => {
 
                 {/* ══════════ RECEIVE TAB ══════════ */}
                 {activeTab === "receive" && (
-                  <div className="p-6 md:p-8">
+                  <div className="px-6 py-3 md:px-8 md:py-5">
                     {timeLeft && (
                       <div
                         className="flex items-center gap-4 p-4 rounded-2xl mb-6"
@@ -1032,6 +1076,55 @@ const Funds = () => {
                         </div>
                       </div>
                     )}
+
+                    {/* ── RECHARGE BUTTON AT TOP ── */}
+                    <div className="">
+                      <button
+                        onClick={() => {
+                          setRechargeModal(true);
+                          setRechargeStep(1);
+                        }}
+                        className="act w-full py-4 rounded-2xl raj font-black text-sm border-none cursor-pointer flex items-center justify-center gap-3"
+                        style={{
+                          background: "linear-gradient(135deg,#f59e0b,#f97316)",
+                          color: "#080810",
+                          letterSpacing: 2,
+                          boxShadow: "0 6px 24px rgba(245,158,11,0.35)",
+                        }}
+                      >
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                        >
+                          <path
+                            d="M12 2v14M5 9l7 7 7-7M3 20h18"
+                            stroke="#080810"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                        I SENT — SUBMIT RECHARGE
+                      </button>
+                      <p
+                        className="raj font-semibold text-xs text-center mt-2"
+                        style={{ color: "#475569" }}
+                      >
+                        Already sent {coinSymbol} to your address? Tap above to
+                        notify us
+                      </p>
+                    </div>
+
+                    {/* divider */}
+                    <div
+                      className="mb-6"
+                      style={{
+                        height: 1,
+                        background: "rgba(255,255,255,0.06)",
+                      }}
+                    />
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {/* Left: address */}
@@ -1177,48 +1270,6 @@ const Funds = () => {
                           </div>
                         )}
                       </div>
-                    </div>
-
-                    {/* BIG RECHARGE BUTTON */}
-                    <div
-                      className="mt-6 pt-6"
-                      style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
-                    >
-                      <p
-                        className="raj font-semibold text-xs text-center mb-4"
-                        style={{ color: "#475569" }}
-                      >
-                        Already sent {coinSymbol} to your address?
-                      </p>
-                      <button
-                        onClick={() => {
-                          setRechargeModal(true);
-                          setRechargeStep(1);
-                        }}
-                        className="act w-full py-4 rounded-2xl raj font-black text-sm border-none cursor-pointer flex items-center justify-center gap-3"
-                        style={{
-                          background: "linear-gradient(135deg,#f59e0b,#f97316)",
-                          color: "#080810",
-                          letterSpacing: 2,
-                          boxShadow: "0 6px 24px rgba(245,158,11,0.35)",
-                        }}
-                      >
-                        <svg
-                          width="18"
-                          height="18"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                        >
-                          <path
-                            d="M12 2v14M5 9l7 7 7-7M3 20h18"
-                            stroke="#080810"
-                            strokeWidth="2.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                        I SENT — SUBMIT RECHARGE
-                      </button>
                     </div>
 
                     <div
@@ -1866,12 +1917,68 @@ const Funds = () => {
                     </span>
                   </div>
                   {amount && parseFloat(amount) > 0 && (
-                    <p
-                      className="raj text-xs mt-2 text-center"
-                      style={{ color: "#10b981" }}
+                    <div
+                      className="mt-3 rounded-2xl px-4 py-3 flex items-center justify-between"
+                      style={{
+                        background: "rgba(16,185,129,0.07)",
+                        border: "1px solid rgba(16,185,129,0.18)",
+                        animation: "slideUp .2s ease both",
+                      }}
                     >
-                      ≈ ${parseFloat(amount).toFixed(2)} USD
-                    </p>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="raj font-semibold text-xs"
+                          style={{ color: "#475569" }}
+                        >
+                          Estimated value
+                        </span>
+                      </div>
+                      {modalPriceLoading ? (
+                        <span
+                          className="raj font-bold text-sm"
+                          style={{ color: "#475569", opacity: 0.7 }}
+                        >
+                          Loading price…
+                        </span>
+                      ) : modalUsdPreview !== null ? (
+                        <div className="flex items-baseline gap-1.5">
+                          <span
+                            className="orb font-black text-base"
+                            style={{ color: "#10b981" }}
+                          >
+                            ≈ ${modalUsdPreview}
+                          </span>
+                          <span
+                            className="raj font-semibold text-xs"
+                            style={{ color: "#475569" }}
+                          >
+                            USD
+                          </span>
+                        </div>
+                      ) : isStablecoin ? (
+                        <div className="flex items-baseline gap-1.5">
+                          <span
+                            className="orb font-black text-base"
+                            style={{ color: "#10b981" }}
+                          >
+                            ≈ ${parseFloat(amount).toFixed(2)}
+                          </span>
+                          <span
+                            className="raj font-semibold text-xs"
+                            style={{ color: "#475569" }}
+                          >
+                            USD
+                          </span>
+                        </div>
+                      ) : (
+                        <span
+                          className="raj font-bold text-sm"
+                          style={{ color: "#64748b" }}
+                        >
+                          Price unavailable
+                        </span>
+                      )}
+                    </div>
                   )}
                 </div>
 
