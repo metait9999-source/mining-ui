@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 
 import { useUser } from "../../../context/UserContext";
 import { FaWallet } from "react-icons/fa";
-import { FiPlus } from "react-icons/fi";
+import { FiEdit2, FiPlus } from "react-icons/fi";
 
 // Resolves coin_logo to a displayable URL (uploaded file or external CDN)
 const resolveLogoSrc = (coinLogo) => {
@@ -199,7 +199,21 @@ const Wallets = () => {
 
                     {/* Actions */}
                     <td className="px-4 py-3">
-                      <span className="text-gray-300 text-xs">—</span>
+                      <div className="flex items-center gap-1.5">
+                        <Link to="/panel/edit-wallet" state={{ wallet }}>
+                          <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-colors">
+                            <FiEdit2 size={11} />
+                            Edit
+                          </button>
+                        </Link>
+                        {/* <button
+                          onClick={() => openModal(wallet.id)}
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-red-50 text-red-500 border border-red-200 hover:bg-red-100 transition-colors"
+                        >
+                          <FiTrash2 size={11} />
+                          Delete
+                        </button> */}
+                      </div>
                     </td>
                   </tr>
                 ))
