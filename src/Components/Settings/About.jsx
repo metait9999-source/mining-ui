@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import Header from "../Header/Header";
 
-function useInView(threshold = 0.15) {
+function useInView(threshold = 0.12) {
   const ref = useRef(null);
   const [inView, setInView] = useState(false);
   useEffect(() => {
@@ -20,92 +20,36 @@ function useInView(threshold = 0.15) {
   return [ref, inView];
 }
 
-function useCountUp(target, duration = 1800, start = false) {
+function useCountUp(target, duration = 2000, start = false) {
   const [value, setValue] = useState(0);
   useEffect(() => {
     if (!start) return;
     let startTime = null;
-    const step = (timestamp) => {
-      if (!startTime) startTime = timestamp;
-      const progress = Math.min((timestamp - startTime) / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
+    const step = (ts) => {
+      if (!startTime) startTime = ts;
+      const p = Math.min((ts - startTime) / duration, 1);
+      const eased = 1 - Math.pow(1 - p, 4);
       setValue(Math.floor(eased * target));
-      if (progress < 1) requestAnimationFrame(step);
+      if (p < 1) requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
   }, [target, duration, start]);
   return value;
 }
 
-function SectionTitle({ label, title }) {
-  const [ref, inView] = useInView();
+// ── Animated counter stat ──────────────────────────────────────────────────
+function Stat({ value, suffix, label, start }) {
+  const count = useCountUp(value, 2000, start);
   return (
-    <div
-      ref={ref}
-      style={{
-        marginBottom: "6vw",
-        opacity: inView ? 1 : 0,
-        transform: inView ? "translateY(0)" : "translateY(16px)",
-        transition: "opacity 0.5s ease, transform 0.5s ease",
-      }}
-    >
+    <div style={{ textAlign: "center" }}>
       <div
         style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 6,
-          marginBottom: "2vw",
-        }}
-      >
-        <span
-          style={{
-            display: "inline-block",
-            width: 3,
-            height: "4vw",
-            borderRadius: 99,
-            background: "#7c3aed",
-          }}
-        />
-        <span
-          style={{
-            fontSize: "3.2vw",
-            fontWeight: 600,
-            color: "#7c3aed",
-            textTransform: "uppercase",
-            letterSpacing: "0.08em",
-          }}
-        >
-          {label}
-        </span>
-      </div>
-      <h2
-        style={{
-          fontSize: "6.5vw",
+          fontSize: "clamp(28px, 7vw, 48px)",
           fontWeight: 800,
-          color: "#f1f5f9",
-          lineHeight: 1.2,
-          letterSpacing: "-0.02em",
-          fontFamily: "'Georgia', serif",
-        }}
-      >
-        {title}
-      </h2>
-    </div>
-  );
-}
-
-function StatItem({ value, suffix, label, start }) {
-  const count = useCountUp(value, 1800, start);
-  return (
-    <div style={{ textAlign: "center", flex: 1 }}>
-      <div
-        style={{
-          fontSize: "7vw",
-          fontWeight: 800,
-          color: "#a78bfa",
+          color: "#f59e0b",
           lineHeight: 1,
+          fontFamily: "'Orbitron', monospace",
           letterSpacing: "-0.02em",
-          fontFamily: "'Georgia', serif",
         }}
       >
         {count.toLocaleString()}
@@ -113,10 +57,12 @@ function StatItem({ value, suffix, label, start }) {
       </div>
       <div
         style={{
-          fontSize: "3vw",
+          fontSize: "clamp(11px, 2.8vw, 13px)",
           color: "#64748b",
-          marginTop: 4,
-          fontWeight: 500,
+          marginTop: 6,
+          fontWeight: 600,
+          letterSpacing: "0.08em",
+          textTransform: "uppercase",
         }}
       >
         {label}
@@ -125,100 +71,299 @@ function StatItem({ value, suffix, label, start }) {
   );
 }
 
-function FeatureCard({ icon, title, desc, accent, delay = 0 }) {
+// ── Hash rate animated ticker ──────────────────────────────────────────────
+function HashTicker() {
+  const [hash, setHash] = useState("847.3");
+  useEffect(() => {
+    const id = setInterval(() => {
+      setHash(parseFloat(Math.random() * 200 + 750).toFixed(1));
+    }, 1200);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <span
+      style={{
+        fontFamily: "'Orbitron', monospace",
+        color: "#10b981",
+        fontWeight: 700,
+        fontSize: "clamp(13px, 3.2vw, 16px)",
+        transition: "all 0.3s ease",
+      }}
+    >
+      {hash} TH/s
+    </span>
+  );
+}
+
+// ── Mining rig illustration ────────────────────────────────────────────────
+function RigCard({ name, hashrate, power, efficiency, color, delay }) {
   const [ref, inView] = useInView();
+  const bars = [0.85, 0.72, 0.91, 0.68, 0.88, 0.75, 0.94, 0.62];
   return (
     <div
       ref={ref}
       style={{
-        background: "rgba(255,255,255,0.03)",
-        border: `1px solid ${accent}33`,
-        borderRadius: 20,
-        padding: "5vw",
+        background: "rgba(15,15,25,0.8)",
+        border: `1px solid ${color}40`,
+        borderRadius: 16,
+        padding: "clamp(16px,4vw,24px)",
         position: "relative",
         overflow: "hidden",
         opacity: inView ? 1 : 0,
-        transform: inView ? "translateY(0)" : "translateY(24px)",
+        transform: inView ? "translateY(0)" : "translateY(28px)",
         transition: `opacity 0.6s ease ${delay}ms, transform 0.6s ease ${delay}ms`,
       }}
     >
       <div
         style={{
           position: "absolute",
-          top: -30,
-          right: -30,
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 2,
+          background: `linear-gradient(90deg, transparent, ${color}, transparent)`,
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          top: -40,
+          right: -40,
+          width: 100,
+          height: 100,
+          borderRadius: "50%",
+          background: `${color}15`,
+          filter: "blur(30px)",
+          pointerEvents: "none",
+        }}
+      />
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          marginBottom: 16,
+        }}
+      >
+        <div>
+          <div
+            style={{
+              fontSize: "clamp(13px,3.5vw,15px)",
+              fontWeight: 700,
+              color: "#f1f5f9",
+              fontFamily: "'Orbitron', monospace",
+              letterSpacing: "0.05em",
+            }}
+          >
+            {name}
+          </div>
+          <div
+            style={{
+              fontSize: "clamp(10px,2.5vw,12px)",
+              color: "#475569",
+              marginTop: 2,
+            }}
+          >
+            {power}W · {efficiency} J/TH
+          </div>
+        </div>
+        <div
+          style={{
+            background: `${color}20`,
+            border: `1px solid ${color}40`,
+            borderRadius: 8,
+            padding: "4px 10px",
+            fontSize: "clamp(11px,2.8vw,13px)",
+            fontWeight: 700,
+            color,
+            fontFamily: "'Orbitron', monospace",
+          }}
+        >
+          {hashrate}
+        </div>
+      </div>
+      {/* Mini bar chart — simulated GPU utilization */}
+      <div
+        style={{ display: "flex", gap: 3, alignItems: "flex-end", height: 36 }}
+      >
+        {bars.map((h, i) => (
+          <div
+            key={i}
+            style={{
+              flex: 1,
+              height: `${h * 100}%`,
+              borderRadius: 3,
+              background: `${color}${inView ? "cc" : "30"}`,
+              transition: `height 0.8s ease ${delay + i * 60}ms, background 0.4s ease`,
+            }}
+          />
+        ))}
+      </div>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          marginTop: 8,
+          fontSize: "clamp(9px,2.2vw,11px)",
+          color: "#475569",
+        }}
+      >
+        <span>GPU Load</span>
+        <span style={{ color: "#10b981" }}>● Active</span>
+      </div>
+    </div>
+  );
+}
+
+// ── Feature card ──────────────────────────────────────────────────────────
+function FeatureCard({ icon, title, desc, accent, delay }) {
+  const [ref, inView] = useInView();
+  return (
+    <div
+      ref={ref}
+      style={{
+        background: "rgba(255,255,255,0.02)",
+        border: "1px solid rgba(255,255,255,0.07)",
+        borderRadius: 18,
+        padding: "clamp(18px,4vw,28px)",
+        opacity: inView ? 1 : 0,
+        transform: inView ? "translateY(0)" : "translateY(22px)",
+        transition: `opacity 0.55s ease ${delay}ms, transform 0.55s ease ${delay}ms`,
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          bottom: -20,
+          right: -20,
           width: 80,
           height: 80,
           borderRadius: "50%",
-          background: `${accent}22`,
+          background: `${accent}18`,
           filter: "blur(20px)",
           pointerEvents: "none",
         }}
       />
       <div
         style={{
-          width: 48,
-          height: 48,
-          borderRadius: 14,
-          background: `${accent}20`,
-          border: `1px solid ${accent}40`,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          marginBottom: "3.5vw",
-          fontSize: 22,
+          fontSize: "clamp(22px,5vw,28px)",
+          marginBottom: "clamp(10px,2.5vw,16px)",
         }}
       >
         {icon}
       </div>
       <div
         style={{
-          fontSize: "4.2vw",
+          fontSize: "clamp(14px,3.5vw,16px)",
           fontWeight: 700,
           color: "#e2e8f0",
-          marginBottom: "1.5vw",
+          marginBottom: 8,
+          fontFamily: "'Rajdhani', sans-serif",
+          letterSpacing: "0.03em",
         }}
       >
         {title}
       </div>
-      <div style={{ fontSize: "3.4vw", color: "#64748b", lineHeight: 1.65 }}>
+      <div
+        style={{
+          fontSize: "clamp(12px,3vw,14px)",
+          color: "#64748b",
+          lineHeight: 1.7,
+        }}
+      >
         {desc}
       </div>
     </div>
   );
 }
 
-function TimelineItem({ year, title, desc, isLast = false, delay = 0 }) {
+// ── Coin card ─────────────────────────────────────────────────────────────
+function CoinCard({ symbol, name, algo, color, delay }) {
+  const [ref, inView] = useInView();
+  return (
+    <div
+      ref={ref}
+      style={{
+        background: `${color}10`,
+        border: `1px solid ${color}30`,
+        borderRadius: 14,
+        padding: "clamp(14px,3.5vw,20px)",
+        textAlign: "center",
+        opacity: inView ? 1 : 0,
+        transform: inView ? "scale(1)" : "scale(0.9)",
+        transition: `opacity 0.5s ease ${delay}ms, transform 0.5s ease ${delay}ms`,
+      }}
+    >
+      <div
+        style={{
+          fontSize: "clamp(24px,6vw,32px)",
+          fontWeight: 900,
+          color,
+          fontFamily: "'Orbitron', monospace",
+          marginBottom: 6,
+        }}
+      >
+        {symbol}
+      </div>
+      <div
+        style={{
+          fontSize: "clamp(11px,2.8vw,13px)",
+          fontWeight: 700,
+          color: "#e2e8f0",
+          marginBottom: 4,
+        }}
+      >
+        {name}
+      </div>
+      <div
+        style={{
+          fontSize: "clamp(9px,2.2vw,11px)",
+          color: "#475569",
+          background: `${color}18`,
+          borderRadius: 6,
+          padding: "2px 8px",
+          display: "inline-block",
+        }}
+      >
+        {algo}
+      </div>
+    </div>
+  );
+}
+
+// ── Timeline item ──────────────────────────────────────────────────────────
+function TimelineItem({ year, title, desc, isLast, delay }) {
   const [ref, inView] = useInView();
   return (
     <div
       ref={ref}
       style={{
         display: "flex",
-        gap: "3vw",
+        gap: "clamp(12px,3vw,20px)",
         alignItems: "flex-start",
         opacity: inView ? 1 : 0,
-        transform: inView ? "translateX(0)" : "translateX(-20px)",
+        transform: inView ? "translateX(0)" : "translateX(-24px)",
         transition: `opacity 0.55s ease ${delay}ms, transform 0.55s ease ${delay}ms`,
       }}
     >
-      {/* Node + line */}
       <div
         style={{
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          paddingTop: 3,
+          paddingTop: 4,
           flexShrink: 0,
         }}
       >
         <div
           style={{
-            width: 12,
-            height: 12,
+            width: 14,
+            height: 14,
             borderRadius: "50%",
-            background: "#7c3aed",
-            boxShadow: "0 0 0 4px rgba(124,58,237,0.2)",
+            background: "#f59e0b",
+            boxShadow: "0 0 0 4px rgba(245,158,11,0.2)",
             flexShrink: 0,
           }}
         />
@@ -227,41 +372,47 @@ function TimelineItem({ year, title, desc, isLast = false, delay = 0 }) {
             style={{
               width: 1,
               flex: 1,
-              background: "rgba(124,58,237,0.2)",
-              minHeight: 36,
+              background: "rgba(245,158,11,0.2)",
+              minHeight: 32,
               marginTop: 4,
             }}
           />
         )}
       </div>
-      {/* Content */}
-      <div style={{ paddingBottom: isLast ? 0 : "4vw" }}>
+      <div style={{ paddingBottom: isLast ? 0 : "clamp(20px,5vw,36px)" }}>
         <div
           style={{
             display: "inline-block",
-            background: "rgba(124,58,237,0.18)",
-            border: "1px solid rgba(124,58,237,0.35)",
+            background: "rgba(245,158,11,0.15)",
+            border: "1px solid rgba(245,158,11,0.3)",
             borderRadius: 99,
             padding: "2px 10px",
-            fontSize: "3vw",
+            fontSize: "clamp(10px,2.5vw,12px)",
             fontWeight: 700,
-            color: "#a78bfa",
-            marginBottom: "1.5vw",
+            color: "#f59e0b",
+            marginBottom: 8,
+            fontFamily: "'Orbitron', monospace",
           }}
         >
           {year}
         </div>
         <div
           style={{
-            fontSize: "3.8vw",
+            fontSize: "clamp(14px,3.5vw,16px)",
             fontWeight: 700,
             color: "#e2e8f0",
-            marginBottom: "1vw",
+            marginBottom: 6,
           }}
         >
           {title}
         </div>
-        <div style={{ fontSize: "3.2vw", color: "#64748b", lineHeight: 1.6 }}>
+        <div
+          style={{
+            fontSize: "clamp(12px,3vw,14px)",
+            color: "#64748b",
+            lineHeight: 1.65,
+          }}
+        >
           {desc}
         </div>
       </div>
@@ -269,99 +420,65 @@ function TimelineItem({ year, title, desc, isLast = false, delay = 0 }) {
   );
 }
 
-function IndustryCard({ icon, label, color, delay }) {
-  const [ref, inView] = useInView();
-  return (
-    <div
-      ref={ref}
-      style={{
-        borderRadius: 18,
-        background: `${color}12`,
-        border: `1px solid ${color}30`,
-        padding: "5vw 4vw",
-        textAlign: "center",
-        opacity: inView ? 1 : 0,
-        transform: inView ? "translateY(0)" : "translateY(20px)",
-        transition: `opacity 0.5s ease ${delay}ms, transform 0.5s ease ${delay}ms`,
-      }}
-    >
-      <div style={{ fontSize: "8vw", marginBottom: "2vw" }}>{icon}</div>
-      <div style={{ fontSize: "3.4vw", fontWeight: 700, color: "#e2e8f0" }}>
-        {label}
-      </div>
-    </div>
-  );
-}
-
+// ── Team card ──────────────────────────────────────────────────────────────
 function TeamCard({ initials, name, role, color, image, delay }) {
   const [ref, inView] = useInView();
   const [imgError, setImgError] = useState(false);
-
   return (
     <div
       ref={ref}
       style={{
-        background: "rgba(255,255,255,0.03)",
+        background: "rgba(255,255,255,0.02)",
         border: "1px solid rgba(255,255,255,0.07)",
-        borderRadius: 20,
-        padding: "4vw",
+        borderRadius: 18,
+        padding: "clamp(16px,4vw,24px)",
         textAlign: "center",
         opacity: inView ? 1 : 0,
-        transform: inView ? "scale(1)" : "scale(0.92)",
+        transform: inView ? "scale(1)" : "scale(0.93)",
         transition: `opacity 0.5s ease ${delay}ms, transform 0.5s ease ${delay}ms`,
         position: "relative",
         overflow: "hidden",
       }}
     >
-      {/* Subtle glow behind avatar */}
       <div
         style={{
           position: "absolute",
-          top: -20,
+          top: -30,
           left: "50%",
           transform: "translateX(-50%)",
-          width: "60%",
+          width: "70%",
           height: 60,
           borderRadius: "50%",
-          background: `${color}22`,
-          filter: "blur(18px)",
+          background: `${color}20`,
+          filter: "blur(20px)",
           pointerEvents: "none",
         }}
       />
-
-      {/* Avatar — image or initials fallback */}
       <div
         style={{
-          width: 64,
-          height: 64,
+          width: "clamp(52px,14vw,68px)",
+          height: "clamp(52px,14vw,68px)",
           borderRadius: "50%",
-          margin: "0 auto 3vw",
+          margin: "0 auto clamp(10px,2.5vw,16px)",
           position: "relative",
-          flexShrink: 0,
         }}
       >
-        {/* Glowing ring */}
         <div
           style={{
             position: "absolute",
             inset: -3,
             borderRadius: "50%",
             background: `linear-gradient(135deg, ${color}, ${color}55)`,
-            zIndex: 0,
           }}
         />
-        {/* Inner white separator ring */}
         <div
           style={{
             position: "absolute",
             inset: -1,
             borderRadius: "50%",
-            background: "#0a0a0f",
-            zIndex: 1,
+            background: "#080810",
           }}
         />
-
-        {/* Profile image */}
         {image && !imgError ? (
           <img
             src={image}
@@ -372,26 +489,24 @@ function TeamCard({ initials, name, role, color, image, delay }) {
               height: "100%",
               borderRadius: "50%",
               objectFit: "cover",
-              display: "block",
               position: "relative",
               zIndex: 2,
             }}
           />
         ) : (
-          /* Initials fallback */
           <div
             style={{
               width: "100%",
               height: "100%",
               borderRadius: "50%",
-              background: `linear-gradient(135deg, ${color}cc, ${color}66)`,
+              background: `linear-gradient(135deg, ${color}cc, ${color}55)`,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: "5.5vw",
+              fontSize: "clamp(14px,4vw,18px)",
               fontWeight: 800,
               color: "#fff",
-              fontFamily: "'Georgia', serif",
+              fontFamily: "'Orbitron', monospace",
               position: "relative",
               zIndex: 2,
             }}
@@ -400,29 +515,25 @@ function TeamCard({ initials, name, role, color, image, delay }) {
           </div>
         )}
       </div>
-
-      {/* Name */}
       <div
         style={{
-          fontSize: "3.6vw",
+          fontSize: "clamp(13px,3.5vw,15px)",
           fontWeight: 700,
           color: "#e2e8f0",
-          marginBottom: "1vw",
+          marginBottom: 6,
         }}
       >
         {name}
       </div>
-
-      {/* Role badge */}
       <div
         style={{
           display: "inline-block",
           background: `${color}18`,
           border: `1px solid ${color}35`,
           borderRadius: 99,
-          padding: "2px 10px",
-          fontSize: "2.8vw",
-          color: color,
+          padding: "3px 10px",
+          fontSize: "clamp(10px,2.5vw,12px)",
+          color,
           fontWeight: 600,
         }}
       >
@@ -432,204 +543,182 @@ function TeamCard({ initials, name, role, color, image, delay }) {
   );
 }
 
-function ImageBlock({
-  src,
-  alt,
-  fallbackIcon,
-  fallbackLabel,
-  aspectRatio = "16/9",
-  borderColor = "rgba(124,58,237,0.25)",
-  bg = "linear-gradient(135deg,#1e1b4b,#312e81,#4c1d95)",
-  shadow = "0 12px 40px rgba(124,58,237,0.18)",
-  badge,
-}) {
-  return (
-    <div
-      style={{
-        borderRadius: 20,
-        overflow: "hidden",
-        aspectRatio,
-        background: bg,
-        border: `1px solid ${borderColor}`,
-        boxShadow: shadow,
-        position: "relative",
-      }}
-    >
-      <img
-        src={src}
-        alt={alt}
-        style={{
-          width: "100%",
-          height: "100%",
-          objectFit: "cover",
-          display: "block",
-        }}
-        onError={(e) => {
-          e.target.style.display = "none";
-        }}
-      />
-
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 8,
-          pointerEvents: "none",
-        }}
-      >
-        <div style={{ fontSize: "12vw", opacity: 0.3 }}>{fallbackIcon}</div>
-        <div
-          style={{
-            color: "rgba(255,255,255,0.25)",
-            fontSize: "3.2vw",
-            fontWeight: 600,
-          }}
-        >
-          {fallbackLabel}
-        </div>
-      </div>
-      {badge && (
-        <div
-          style={{
-            position: "absolute",
-            bottom: 14,
-            left: 14,
-            background: "rgba(10,10,15,0.72)",
-            backdropFilter: "blur(10px)",
-            border: "1px solid rgba(255,255,255,0.12)",
-            borderRadius: 12,
-            padding: "8px 12px",
-          }}
-        >
-          <div style={{ fontSize: "3vw", color: "#a78bfa", fontWeight: 700 }}>
-            {badge.title}
-          </div>
-          <div style={{ fontSize: "2.8vw", color: "#64748b" }}>{badge.sub}</div>
-        </div>
-      )}
-    </div>
-  );
-}
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function AboutUs() {
   const [statsRef, statsInView] = useInView(0.3);
 
+  const rigs = [
+    {
+      name: "ANTMINER S21",
+      hashrate: "200 TH/s",
+      power: "3550",
+      efficiency: "17.5",
+      color: "#f59e0b",
+      delay: 0,
+    },
+    {
+      name: "WHATSMINER M60",
+      hashrate: "186 TH/s",
+      power: "3441",
+      efficiency: "18.5",
+      color: "#10b981",
+      delay: 100,
+    },
+    {
+      name: "ANTMINER S19 XP",
+      hashrate: "140 TH/s",
+      power: "3010",
+      efficiency: "21.5",
+      color: "#3b82f6",
+      delay: 200,
+    },
+    {
+      name: "AVALON A1466",
+      hashrate: "150 TH/s",
+      power: "3400",
+      efficiency: "22.7",
+      color: "#a78bfa",
+      delay: 300,
+    },
+  ];
+
+  const coins = [
+    {
+      symbol: "BTC",
+      name: "Bitcoin",
+      algo: "SHA-256",
+      color: "#f59e0b",
+      delay: 0,
+    },
+    {
+      symbol: "ETH",
+      name: "Ethereum",
+      algo: "Ethash",
+      color: "#627eea",
+      delay: 80,
+    },
+    {
+      symbol: "LTC",
+      name: "Litecoin",
+      algo: "Scrypt",
+      color: "#a0a0a0",
+      delay: 160,
+    },
+    {
+      symbol: "XMR",
+      name: "Monero",
+      algo: "RandomX",
+      color: "#ff6600",
+      delay: 240,
+    },
+  ];
+
   const features = [
     {
-      icon: "🤖",
-      title: "AI Trading Bot",
-      desc: "Our AI engine analyses 10,000+ signals per second across 200 exchanges, executing trades with precision no human could match.",
-      accent: "#7c3aed",
+      icon: "⛏️",
+      title: "Industrial-Grade Hardware",
+      desc: "Our data centers run the latest ASIC miners from Bitmain, MicroBT, and Canaan — machines that deliver maximum hash rate with minimum power draw.",
+      accent: "#f59e0b",
       delay: 0,
     },
     {
       icon: "⚡",
-      title: "Smart Arbitrage",
-      desc: "Automatically identifies and exploits price discrepancies across markets in real-time, generating consistent returns.",
-      accent: "#0891b2",
+      title: "Renewable Energy First",
+      desc: "70% of our mining operations are powered by renewable energy sources — hydro, solar, and wind — keeping your carbon footprint and electricity costs low.",
+      accent: "#10b981",
       delay: 80,
     },
     {
-      icon: "🛡️",
-      title: "Bank-Grade Security",
-      desc: "256-bit encryption, cold wallet storage, and multi-factor authentication protect every asset 24/7.",
-      accent: "#059669",
+      icon: "📊",
+      title: "Real-Time Dashboard",
+      desc: "Monitor your mining output, hash rate, power consumption, and earnings 24/7 from any device with our live analytics dashboard.",
+      accent: "#3b82f6",
       delay: 160,
     },
     {
-      icon: "📊",
-      title: "Leveraged Trading",
-      desc: "Access up to 100x leverage on major pairs with intelligent risk management that protects your capital automatically.",
-      accent: "#d97706",
+      icon: "🔒",
+      title: "Non-Custodial Payouts",
+      desc: "Mined coins go directly to your wallet. We never hold your funds. Automatic payouts are triggered daily when your balance hits the threshold.",
+      accent: "#a78bfa",
       delay: 240,
     },
     {
-      icon: "🌐",
-      title: "Global Markets",
-      desc: "Trade Crypto, Forex, Precious Metals, and Commodities from one unified platform with a single account.",
+      icon: "🌡️",
+      title: "Thermal Management",
+      desc: "Immersion cooling and precision airflow systems keep our rigs at peak operating temperature, maximizing lifespan and preventing costly downtime.",
       accent: "#ec4899",
       delay: 320,
     },
     {
-      icon: "📱",
-      title: "Mobile-First",
-      desc: "Full-featured trading platform built for mobile — never miss an opportunity wherever you are in the world.",
-      accent: "#7c3aed",
+      icon: "🤖",
+      title: "Auto-Switch Mining",
+      desc: "Our profitability engine automatically switches your hash power to the most profitable coin at any given moment, silently maximizing your daily returns.",
+      accent: "#f59e0b",
       delay: 400,
     },
   ];
 
   const timeline = [
     {
-      year: "2018",
-      title: "Founded",
-      desc: "Born from a vision to democratize institutional-grade trading tools for everyone.",
+      year: "2019",
+      title: "First Mining Farm",
+      desc: "Launched our first 50-rig Bitcoin mining facility in Iceland, leveraging geothermal energy for ultra-low operating costs.",
       delay: 0,
     },
     {
-      year: "2020",
-      title: "AI Engine Launch",
-      desc: "Released our first AI trading bot, achieving 94% signal accuracy in 5-year backtesting.",
+      year: "2021",
+      title: "Multi-Coin Expansion",
+      desc: "Expanded to Ethereum, Litecoin, and Monero mining pools — giving subscribers diversified exposure across proof-of-work blockchains.",
       delay: 100,
     },
     {
       year: "2022",
-      title: "1M Users",
-      desc: "Crossed one million active traders across 80 countries, managing over $2B in assets.",
+      title: "10,000 Active Miners",
+      desc: "Crossed 10,000 active cloud mining subscribers across 60 countries, with over $180M in cumulative payouts.",
       delay: 200,
     },
     {
       year: "2024",
-      title: "Multi-Asset Platform",
-      desc: "Expanded from Crypto into Forex and Precious Metals — a true all-in-one trading ecosystem.",
+      title: "Next-Gen ASICs",
+      desc: "Deployed the Antminer S21 Pro fleet — our most energy-efficient hardware to date — across three new data centers in Norway and Canada.",
       delay: 300,
     },
   ];
 
-  const industries = [
-    { icon: "₿", label: "Cryptocurrency", color: "#f59e0b", delay: 0 },
-    { icon: "💱", label: "Forex Trading", color: "#0891b2", delay: 80 },
-    { icon: "🥇", label: "Precious Metals", color: "#d97706", delay: 160 },
-    { icon: "📈", label: "Commodities", color: "#059669", delay: 240 },
-  ];
-
   const team = [
     {
-      initials: "AK",
-      name: "Alex Kim",
-      role: "CEO & Co-Founder",
-      color: "#7c3aed",
+      initials: "RK",
+      name: "Rajan Kohli",
+      role: "CEO & Mining Architect",
+      color: "#f59e0b",
       image:
         "https://media.licdn.com/dms/image/v2/D4E03AQFXjmSFhCVXoA/profile-displayphoto-scale_200_200/B4EZfGrcEVHwAc-/0/1751384965788?e=2147483647&v=beta&t=6N5rC33Uy6tFRsRu7dlbjsS9IhPDZaDqw-45WwlkUq8",
       delay: 0,
     },
     {
-      initials: "SR",
-      name: "Sofia Ramos",
-      role: "CTO & AI Lead",
-      color: "#0891b2",
+      initials: "TW",
+      name: "Tara Walsh",
+      role: "CTO & Infrastructure",
+      color: "#10b981",
       image:
         "https://media.licdn.com/dms/image/v2/D5603AQGqMlev2bNlQQ/profile-displayphoto-shrink_200_200/profile-displayphoto-shrink_200_200/0/1728390189568?e=2147483647&v=beta&t=NRXA-p7nKAhiwiJUV7e_9jbvq-77ABJpV5TcDFXLZX0",
       delay: 80,
     },
     {
-      initials: "MJ",
-      name: "Marcus J.",
-      role: "Head of Trading",
-      color: "#059669",
+      initials: "DM",
+      name: "Denis Müller",
+      role: "Head of Operations",
+      color: "#3b82f6",
       image:
         "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRWSIhcak19CtkPCl8PQkJdjSHaA6KOWDoJQA&s",
       delay: 160,
     },
     {
-      initials: "NP",
-      name: "Nina Patel",
-      role: "Chief Security",
-      color: "#ec4899",
+      initials: "AL",
+      name: "Aiko Lim",
+      role: "Blockchain Security",
+      color: "#a78bfa",
       image:
         "https://www.cedarcrest.edu/wp-content/uploads/2024/10/Nina_Patel_2.jpg",
       delay: 240,
@@ -637,445 +726,948 @@ export default function AboutUs() {
   ];
 
   return (
-    <div style={{ background: "#0a0a0f", minHeight: "100vh" }}>
+    <div
+      style={{
+        background: "#080810",
+        minHeight: "100vh",
+        fontFamily: "'Rajdhani', sans-serif",
+      }}
+    >
+      {/* Load fonts */}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@400;500;600;700&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: #080810; }
+
+        /* Scrolling ticker */
+        @keyframes ticker { from { transform: translateX(0) } to { transform: translateX(-50%) } }
+        .ticker-inner { display: flex; gap: 40px; animation: ticker 18s linear infinite; white-space: nowrap; }
+
+        /* Pulse dot */
+        @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:0.4 } }
+        .pulse { animation: pulse 2s ease infinite; }
+
+        /* Grid line bg */
+        .grid-bg {
+          background-image:
+            linear-gradient(rgba(245,158,11,0.04) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(245,158,11,0.04) 1px, transparent 1px);
+          background-size: 40px 40px;
+        }
+
+        @media (min-width: 768px) {
+          .rig-grid { display: grid !important; grid-template-columns: 1fr 1fr !important; }
+          .coin-grid { grid-template-columns: repeat(4,1fr) !important; }
+          .feature-grid { display: grid !important; grid-template-columns: 1fr 1fr !important; }
+          .team-grid { grid-template-columns: repeat(4,1fr) !important; }
+          .stats-row { flex-direction: row !important; }
+          .stats-divider-v { width: 1px !important; height: auto !important; }
+          .hero-inner { flex-direction: row !important; align-items: center !important; }
+          .hero-text { max-width: 520px; }
+          .hero-visual { flex: 1; }
+        }
+
+        @media (min-width: 1024px) {
+          .rig-grid { grid-template-columns: repeat(4,1fr) !important; }
+          .feature-grid { grid-template-columns: repeat(3,1fr) !important; }
+        }
+      `}</style>
+
       <div className="flex-shrink-0">
         <Header pageTitle="About Us" />
       </div>
 
+      {/* ── HERO ── */}
       <div
+        className="grid-bg"
         style={{
+          padding: "clamp(40px,10vw,80px) clamp(20px,6vw,60px)",
           position: "relative",
           overflow: "hidden",
-          padding: "10vw 6vw 12vw",
-          textAlign: "center",
         }}
       >
+        {/* Amber glow */}
         <div
           style={{
             position: "absolute",
-            top: "-30%",
+            top: "20%",
             left: "50%",
             transform: "translateX(-50%)",
-            width: "90vw",
-            height: "90vw",
-            borderRadius: "50%",
+            width: "80vw",
+            height: "40vw",
+            maxWidth: 700,
+            maxHeight: 300,
             background:
-              "radial-gradient(circle,rgba(124,58,237,0.13) 0%,transparent 70%)",
+              "radial-gradient(ellipse,rgba(245,158,11,0.12) 0%,transparent 70%)",
             pointerEvents: "none",
           }}
         />
 
         <div
+          className="hero-inner"
           style={{
-            display: "inline-block",
-            background: "rgba(124,58,237,0.15)",
-            border: "1px solid rgba(124,58,237,0.3)",
-            borderRadius: 99,
-            padding: "4px 14px",
-            fontSize: "3.2vw",
-            fontWeight: 600,
-            color: "#a78bfa",
-            letterSpacing: "0.08em",
-            textTransform: "uppercase",
-            marginBottom: "4vw",
-          }}
-        >
-          Est. 2018 · Trusted Worldwide
-        </div>
-
-        <h1
-          style={{
-            fontSize: "8vw",
-            fontWeight: 900,
-            color: "#f1f5f9",
-            lineHeight: 1.1,
-            letterSpacing: "-0.03em",
-            fontFamily: "'Georgia', serif",
-            marginBottom: "4vw",
-          }}
-        >
-          The Future of
-          <br />
-          <span
-            style={{
-              background: "linear-gradient(135deg,#a78bfa,#60a5fa)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-            }}
-          >
-            Intelligent Trading
-          </span>
-        </h1>
-
-        <p
-          style={{
-            fontSize: "3.8vw",
-            color: "#94a3b8",
-            lineHeight: 1.7,
-            maxWidth: 320,
+            display: "flex",
+            flexDirection: "column",
+            gap: "clamp(32px,6vw,60px)",
+            maxWidth: 1200,
             margin: "0 auto",
+            position: "relative",
           }}
         >
-          Trust Pro combines cutting-edge AI with institutional-grade
-          infrastructure to give every trader an unfair advantage in global
-          markets.
-        </p>
+          <div className="hero-text">
+            {/* Badge */}
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                background: "rgba(245,158,11,0.1)",
+                border: "1px solid rgba(245,158,11,0.25)",
+                borderRadius: 99,
+                padding: "5px 14px",
+                marginBottom: "clamp(16px,4vw,24px)",
+              }}
+            >
+              <span
+                className="pulse"
+                style={{
+                  width: 7,
+                  height: 7,
+                  borderRadius: "50%",
+                  background: "#f59e0b",
+                  display: "inline-block",
+                }}
+              />
+              <span
+                style={{
+                  fontSize: "clamp(10px,2.5vw,12px)",
+                  fontWeight: 700,
+                  color: "#f59e0b",
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                }}
+              >
+                Est. 2019 · Mining First
+              </span>
+            </div>
+
+            <h1
+              style={{
+                fontSize: "clamp(32px,8vw,64px)",
+                fontWeight: 900,
+                lineHeight: 1.05,
+                letterSpacing: "-0.03em",
+                fontFamily: "'Orbitron', monospace",
+                color: "#f1f5f9",
+                marginBottom: "clamp(14px,3vw,20px)",
+              }}
+            >
+              MINE SMARTER.
+              <br />
+              <span
+                style={{
+                  background: "linear-gradient(135deg,#f59e0b,#fbbf24,#f97316)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                }}
+              >
+                EARN HARDER.
+              </span>
+            </h1>
+
+            <p
+              style={{
+                fontSize: "clamp(14px,3.5vw,17px)",
+                color: "#94a3b8",
+                lineHeight: 1.75,
+                maxWidth: 480,
+                marginBottom: "clamp(20px,5vw,32px)",
+              }}
+            >
+              CryptoMine operates industrial-scale ASIC mining farms across 6
+              countries, delivering consistent crypto earnings to over 50,000
+              subscribers worldwide — no hardware, no headaches.
+            </p>
+
+            {/* Live hash ticker */}
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 12,
+                background: "rgba(16,185,129,0.08)",
+                border: "1px solid rgba(16,185,129,0.2)",
+                borderRadius: 12,
+                padding: "10px 16px",
+              }}
+            >
+              <span
+                className="pulse"
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  background: "#10b981",
+                  display: "inline-block",
+                }}
+              />
+              <span
+                style={{
+                  fontSize: "clamp(11px,2.8vw,13px)",
+                  color: "#64748b",
+                  fontWeight: 600,
+                }}
+              >
+                LIVE NETWORK HASH RATE
+              </span>
+              <HashTicker />
+            </div>
+          </div>
+
+          {/* Visual — rig metrics panel */}
+          <div className="hero-visual" style={{ flex: 1 }}>
+            <div
+              style={{
+                background: "rgba(10,10,20,0.9)",
+                border: "1px solid rgba(245,158,11,0.2)",
+                borderRadius: 20,
+                padding: "clamp(16px,4vw,28px)",
+                maxWidth: 480,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 20,
+                  paddingBottom: 16,
+                  borderBottom: "1px solid rgba(255,255,255,0.06)",
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: "'Orbitron', monospace",
+                    fontSize: "clamp(11px,2.8vw,13px)",
+                    color: "#f59e0b",
+                    fontWeight: 700,
+                  }}
+                >
+                  FARM STATUS
+                </span>
+                <span
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    fontSize: "clamp(10px,2.5vw,12px)",
+                    color: "#10b981",
+                    fontWeight: 600,
+                  }}
+                >
+                  <span
+                    className="pulse"
+                    style={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: "50%",
+                      background: "#10b981",
+                      display: "inline-block",
+                    }}
+                  />
+                  ALL SYSTEMS ONLINE
+                </span>
+              </div>
+              {[
+                {
+                  label: "Active ASICs",
+                  value: "12,847",
+                  color: "#f59e0b",
+                  pct: 97,
+                },
+                {
+                  label: "24h Output",
+                  value: "4.2 BTC",
+                  color: "#10b981",
+                  pct: 88,
+                },
+                {
+                  label: "Power Draw",
+                  value: "48.3 MW",
+                  color: "#3b82f6",
+                  pct: 74,
+                },
+                { label: "Uptime", value: "99.94%", color: "#a78bfa", pct: 99 },
+              ].map((m, i) => (
+                <div key={i} style={{ marginBottom: i < 3 ? 14 : 0 }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      marginBottom: 6,
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: "clamp(11px,2.8vw,13px)",
+                        color: "#64748b",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {m.label}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "clamp(12px,3vw,14px)",
+                        fontWeight: 700,
+                        color: m.color,
+                        fontFamily: "'Orbitron', monospace",
+                      }}
+                    >
+                      {m.value}
+                    </span>
+                  </div>
+                  <div
+                    style={{
+                      height: 4,
+                      background: "rgba(255,255,255,0.06)",
+                      borderRadius: 99,
+                      overflow: "hidden",
+                    }}
+                  >
+                    <div
+                      style={{
+                        height: "100%",
+                        width: `${m.pct}%`,
+                        borderRadius: 99,
+                        background: m.color,
+                        transition: "width 1.2s ease",
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* ── Hero Banner Image ── */}
-      <div style={{ padding: "0 5vw 8vw" }}>
-        <ImageBlock
-          src="https://img.freepik.com/premium-photo/electronic-display-live-stock-chart-computer-screen-providing-realtime-market-analysis-graph-chart-stock-market-investment-trading-ai-generated_538213-36827.jpg"
-          alt="Trust Pro Platform"
-          aspectRatio="16/9"
-          badge={{ title: "LIVE PLATFORM", sub: "Trusted by 2M+ traders" }}
-        />
+      {/* ── Scrolling coin ticker ── */}
+      <div
+        style={{
+          background: "rgba(245,158,11,0.06)",
+          borderTop: "1px solid rgba(245,158,11,0.15)",
+          borderBottom: "1px solid rgba(245,158,11,0.15)",
+          padding: "10px 0",
+          overflow: "hidden",
+        }}
+      >
+        <div className="ticker-inner" style={{ display: "flex", gap: 40 }}>
+          {[...Array(2)].map((_, ri) =>
+            [
+              "BTC +2.4%",
+              "ETH +1.8%",
+              "LTC +3.1%",
+              "XMR +0.9%",
+              "DOGE +5.2%",
+              "BTC +2.4%",
+              "ETH +1.8%",
+              "LTC +3.1%",
+            ].map((t, i) => (
+              <span
+                key={`${ri}-${i}`}
+                style={{
+                  fontSize: "clamp(11px,2.8vw,13px)",
+                  fontWeight: 700,
+                  color: "#f59e0b",
+                  fontFamily: "'Orbitron', monospace",
+                  letterSpacing: "0.08em",
+                  opacity: 0.8,
+                }}
+              >
+                ⛏ {t}
+              </span>
+            )),
+          )}
+        </div>
       </div>
 
       {/* ── Stats ── */}
       <div
         ref={statsRef}
-        style={{
-          margin: "0 5vw 10vw",
-          background: "rgba(255,255,255,0.03)",
-          border: "1px solid rgba(255,255,255,0.07)",
-          borderRadius: 24,
-          padding: "6vw 4vw",
-        }}
+        style={{ padding: "clamp(40px,8vw,64px) clamp(20px,6vw,60px)" }}
       >
         <div
           style={{
-            display: "flex",
-            justifyContent: "space-between",
-            gap: "2vw",
-            marginBottom: "6vw",
+            background: "rgba(15,15,25,0.6)",
+            border: "1px solid rgba(255,255,255,0.06)",
+            borderRadius: 24,
+            padding: "clamp(28px,6vw,48px)",
+            maxWidth: 1000,
+            margin: "0 auto",
           }}
         >
-          <StatItem
-            value={2000000}
-            suffix="+"
-            label="Active Traders"
-            start={statsInView}
-          />
-          <div style={{ width: 1, background: "rgba(255,255,255,0.07)" }} />
-          <StatItem
-            value={200}
-            suffix="+"
-            label="Exchanges"
-            start={statsInView}
-          />
-        </div>
-        <div
-          style={{
-            height: 1,
-            background: "rgba(255,255,255,0.07)",
-            marginBottom: "6vw",
-          }}
-        />
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            gap: "2vw",
-          }}
-        >
-          <StatItem
-            value={80}
-            suffix="+"
-            label="Countries"
-            start={statsInView}
-          />
-          <div style={{ width: 1, background: "rgba(255,255,255,0.07)" }} />
-          <StatItem
-            value={99}
-            suffix="%"
-            label="Uptime SLA"
-            start={statsInView}
-          />
+          <div
+            className="stats-row"
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "clamp(24px,5vw,40px)",
+              justifyContent: "space-around",
+              alignItems: "center",
+            }}
+          >
+            {[
+              { value: 50000, suffix: "+", label: "Active Subscribers" },
+              { value: 12847, suffix: "", label: "ASIC Miners Online" },
+              { value: 6, suffix: "", label: "Countries" },
+              { value: 99, suffix: "%", label: "Uptime SLA" },
+            ].map((s, i) => (
+              <React.Fragment key={i}>
+                <Stat {...s} start={statsInView} />
+                {i < 3 && (
+                  <div
+                    className="stats-divider-v"
+                    style={{
+                      height: 1,
+                      width: "80%",
+                      background: "rgba(255,255,255,0.06)",
+                    }}
+                  />
+                )}
+              </React.Fragment>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* ── Our Story ── */}
-      <div style={{ padding: "0 5vw 10vw" }}>
-        <SectionTitle label="Our Story" title="Built by traders, for traders" />
-        <p
-          style={{
-            fontSize: "3.8vw",
-            color: "#94a3b8",
-            lineHeight: 1.75,
-            marginBottom: "4vw",
-          }}
-        >
-          Trust Pro was founded in 2018 by a team of quantitative analysts and
-          software engineers who were frustrated by the gap between
-          institutional trading tools and what everyday investors could access.
-        </p>
-        <ImageBlock
-          src="/assets/headquaters.png"
-          alt="Our Team"
-          fallbackIcon="🏢"
-          fallbackLabel="Our Headquarters"
-          aspectRatio="4/3"
-          bg="linear-gradient(135deg,#0c4a6e,#075985)"
-          borderColor="rgba(8,145,178,0.2)"
-          shadow="0 8px 28px rgba(8,145,178,0.12)"
-        />
-        <p
-          style={{
-            fontSize: "3.8vw",
-            color: "#94a3b8",
-            lineHeight: 1.75,
-            marginTop: "4vw",
-          }}
-        >
-          Today we power over 2 million traders across 80 countries with our
-          AI-driven platform that analyses billions of data points daily to
-          deliver smarter, faster, and more profitable decisions.
-        </p>
+      {/* ── Our Rigs ── */}
+      <div style={{ padding: "0 clamp(20px,6vw,60px) clamp(48px,8vw,72px)" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+          <div style={{ marginBottom: "clamp(24px,5vw,40px)" }}>
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                marginBottom: 12,
+              }}
+            >
+              <div
+                style={{
+                  width: 3,
+                  height: 18,
+                  borderRadius: 99,
+                  background: "#f59e0b",
+                }}
+              />
+              <span
+                style={{
+                  fontSize: "clamp(10px,2.5vw,12px)",
+                  fontWeight: 700,
+                  color: "#f59e0b",
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  fontFamily: "'Orbitron', monospace",
+                }}
+              >
+                Our Hardware
+              </span>
+            </div>
+            <h2
+              style={{
+                fontSize: "clamp(22px,5.5vw,40px)",
+                fontWeight: 900,
+                color: "#f1f5f9",
+                fontFamily: "'Orbitron', monospace",
+                letterSpacing: "-0.02em",
+              }}
+            >
+              FLEET OF <span style={{ color: "#f59e0b" }}>12,847</span> ASICS
+            </h2>
+          </div>
+          <div
+            className="rig-grid"
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "clamp(12px,2.5vw,16px)",
+            }}
+          >
+            {rigs.map((r, i) => (
+              <RigCard key={i} {...r} />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Supported Coins ── */}
+      <div style={{ padding: "0 clamp(20px,6vw,60px) clamp(48px,8vw,72px)" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+          <div style={{ marginBottom: "clamp(20px,4vw,32px)" }}>
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                marginBottom: 10,
+              }}
+            >
+              <div
+                style={{
+                  width: 3,
+                  height: 18,
+                  borderRadius: 99,
+                  background: "#f59e0b",
+                }}
+              />
+              <span
+                style={{
+                  fontSize: "clamp(10px,2.5vw,12px)",
+                  fontWeight: 700,
+                  color: "#f59e0b",
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  fontFamily: "'Orbitron', monospace",
+                }}
+              >
+                Mineable Assets
+              </span>
+            </div>
+            <h2
+              style={{
+                fontSize: "clamp(22px,5.5vw,40px)",
+                fontWeight: 900,
+                color: "#f1f5f9",
+                fontFamily: "'Orbitron', monospace",
+                letterSpacing: "-0.02em",
+              }}
+            >
+              COINS WE MINE
+            </h2>
+          </div>
+          <div
+            className="coin-grid"
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "clamp(10px,2.5vw,16px)",
+            }}
+          >
+            {coins.map((c, i) => (
+              <CoinCard key={i} {...c} />
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* ── Features ── */}
-      <div style={{ padding: "0 5vw 10vw" }}>
-        <SectionTitle
-          label="What We Offer"
-          title="Everything you need to win"
-        />
-        <div style={{ display: "flex", flexDirection: "column", gap: "3.5vw" }}>
-          {features.map((f, i) => (
-            <FeatureCard key={i} {...f} />
-          ))}
-        </div>
-      </div>
-
-      {/* ── AI Bot Highlight ── */}
-      <div style={{ padding: "0 5vw 10vw" }}>
-        <div
-          style={{
-            borderRadius: 24,
-            overflow: "hidden",
-            background:
-              "linear-gradient(135deg,rgba(124,58,237,0.2) 0%,rgba(99,102,241,0.1) 100%)",
-            border: "1px solid rgba(124,58,237,0.3)",
-            padding: "6vw",
-            position: "relative",
-          }}
-        >
-          <div
-            style={{
-              position: "absolute",
-              top: -40,
-              right: -40,
-              width: 140,
-              height: 140,
-              borderRadius: "50%",
-              background: "rgba(124,58,237,0.2)",
-              filter: "blur(40px)",
-              pointerEvents: "none",
-            }}
-          />
-
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              background: "rgba(124,58,237,0.2)",
-              border: "1px solid rgba(124,58,237,0.35)",
-              borderRadius: 99,
-              padding: "3px 12px",
-              marginBottom: "4vw",
-            }}
-          >
-            <span
+      <div style={{ padding: "0 clamp(20px,6vw,60px) clamp(48px,8vw,72px)" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+          <div style={{ marginBottom: "clamp(24px,5vw,40px)" }}>
+            <div
               style={{
-                width: 6,
-                height: 6,
-                borderRadius: "50%",
-                background: "#22c55e",
-                display: "inline-block",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                marginBottom: 10,
               }}
-            />
-            <span
-              style={{ fontSize: "3vw", color: "#a78bfa", fontWeight: 600 }}
             >
-              AI ENGINE LIVE
-            </span>
-          </div>
-
-          <h2
-            style={{
-              fontSize: "6vw",
-              fontWeight: 800,
-              color: "#f1f5f9",
-              lineHeight: 1.2,
-              marginBottom: "3vw",
-              fontFamily: "'Georgia', serif",
-            }}
-          >
-            Our AI Bot Never Sleeps
-          </h2>
-          <p
-            style={{
-              fontSize: "3.6vw",
-              color: "#94a3b8",
-              lineHeight: 1.7,
-              marginBottom: "5vw",
-            }}
-          >
-            Operating 24/7 across 200+ exchanges, our neural network processes
-            over 10,000 market signals per second — spotting opportunities
-            invisible to the human eye.
-          </p>
-
-          <div style={{ display: "flex", gap: "3vw", marginBottom: "5vw" }}>
-            {[
-              { val: "10K+", label: "Signals/sec" },
-              { val: "94%", label: "Accuracy" },
-              { val: "<1ms", label: "Latency" },
-            ].map((s, i) => (
               <div
-                key={i}
                 style={{
-                  flex: 1,
-                  background: "rgba(10,10,15,0.5)",
-                  border: "1px solid rgba(124,58,237,0.2)",
-                  borderRadius: 14,
-                  padding: "3vw",
-                  textAlign: "center",
+                  width: 3,
+                  height: 18,
+                  borderRadius: 99,
+                  background: "#f59e0b",
+                }}
+              />
+              <span
+                style={{
+                  fontSize: "clamp(10px,2.5vw,12px)",
+                  fontWeight: 700,
+                  color: "#f59e0b",
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  fontFamily: "'Orbitron', monospace",
                 }}
               >
-                <div
-                  style={{
-                    fontSize: "5vw",
-                    fontWeight: 800,
-                    color: "#a78bfa",
-                    fontFamily: "'Georgia', serif",
-                  }}
-                >
-                  {s.val}
-                </div>
-                <div
-                  style={{ fontSize: "2.8vw", color: "#475569", marginTop: 2 }}
-                >
-                  {s.label}
-                </div>
-              </div>
+                Platform
+              </span>
+            </div>
+            <h2
+              style={{
+                fontSize: "clamp(22px,5.5vw,40px)",
+                fontWeight: 900,
+                color: "#f1f5f9",
+                fontFamily: "'Orbitron', monospace",
+                letterSpacing: "-0.02em",
+              }}
+            >
+              WHY CRYPTOMINE
+            </h2>
+          </div>
+          <div
+            className="feature-grid"
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "clamp(12px,2.5vw,16px)",
+            }}
+          >
+            {features.map((f, i) => (
+              <FeatureCard key={i} {...f} />
             ))}
           </div>
-
-          <ImageBlock
-            src="https://www.celebremagazine.world/wp-content/uploads/2024/11/aok-1170x600.jpg"
-            alt="AI Trading Bot"
-            aspectRatio="16/7"
-            bg="rgba(10,10,15,0.4)"
-            borderColor="rgba(124,58,237,0.15)"
-            shadow="none"
-          />
         </div>
       </div>
 
-      <div style={{ padding: "0 5vw 10vw" }}>
-        <SectionTitle label="Our Journey" title="Milestones that shaped us" />
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          {timeline.map((item, i) => (
-            <TimelineItem
-              key={i}
-              {...item}
-              isLast={i === timeline.length - 1}
+      {/* ── Our Story / Timeline ── */}
+      <div style={{ padding: "0 clamp(20px,6vw,60px) clamp(48px,8vw,72px)" }}>
+        <div style={{ maxWidth: 640, margin: "0 auto" }}>
+          <div style={{ marginBottom: "clamp(24px,5vw,40px)" }}>
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                marginBottom: 10,
+              }}
+            >
+              <div
+                style={{
+                  width: 3,
+                  height: 18,
+                  borderRadius: 99,
+                  background: "#f59e0b",
+                }}
+              />
+              <span
+                style={{
+                  fontSize: "clamp(10px,2.5vw,12px)",
+                  fontWeight: 700,
+                  color: "#f59e0b",
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  fontFamily: "'Orbitron', monospace",
+                }}
+              >
+                Our Journey
+              </span>
+            </div>
+            <h2
+              style={{
+                fontSize: "clamp(22px,5.5vw,40px)",
+                fontWeight: 900,
+                color: "#f1f5f9",
+                fontFamily: "'Orbitron', monospace",
+                letterSpacing: "-0.02em",
+              }}
+            >
+              MILESTONES
+            </h2>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            {timeline.map((t, i) => (
+              <TimelineItem key={i} {...t} isLast={i === timeline.length - 1} />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Energy section ── */}
+      <div style={{ padding: "0 clamp(20px,6vw,60px) clamp(48px,8vw,72px)" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+          <div
+            style={{
+              background:
+                "linear-gradient(135deg,rgba(16,185,129,0.12),rgba(16,185,129,0.04))",
+              border: "1px solid rgba(16,185,129,0.25)",
+              borderRadius: 24,
+              padding: "clamp(24px,5vw,48px)",
+              position: "relative",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                position: "absolute",
+                top: -60,
+                right: -60,
+                width: 200,
+                height: 200,
+                borderRadius: "50%",
+                background: "rgba(16,185,129,0.1)",
+                filter: "blur(60px)",
+                pointerEvents: "none",
+              }}
             />
-          ))}
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                marginBottom: "clamp(12px,3vw,20px)",
+              }}
+            >
+              <span style={{ fontSize: 24 }}>🌿</span>
+              <span
+                style={{
+                  fontSize: "clamp(10px,2.5vw,12px)",
+                  fontWeight: 700,
+                  color: "#10b981",
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  fontFamily: "'Orbitron', monospace",
+                }}
+              >
+                Green Mining
+              </span>
+            </div>
+            <h2
+              style={{
+                fontSize: "clamp(20px,5vw,36px)",
+                fontWeight: 900,
+                color: "#f1f5f9",
+                fontFamily: "'Orbitron', monospace",
+                marginBottom: "clamp(12px,3vw,20px)",
+                letterSpacing: "-0.02em",
+              }}
+            >
+              70% RENEWABLE ENERGY
+            </h2>
+            <p
+              style={{
+                fontSize: "clamp(13px,3.2vw,16px)",
+                color: "#94a3b8",
+                lineHeight: 1.75,
+                maxWidth: 600,
+                marginBottom: "clamp(20px,4vw,32px)",
+              }}
+            >
+              Our data centers are strategically located near hydroelectric
+              dams, wind farms, and solar arrays. We actively reduce the
+              environmental footprint of crypto mining without compromising
+              profitability.
+            </p>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(3,1fr)",
+                gap: "clamp(10px,2.5vw,16px)",
+              }}
+            >
+              {[
+                { icon: "💧", val: "45%", label: "Hydro Power" },
+                { icon: "☀️", val: "15%", label: "Solar" },
+                { icon: "💨", val: "10%", label: "Wind" },
+              ].map((e, i) => (
+                <div
+                  key={i}
+                  style={{
+                    background: "rgba(16,185,129,0.08)",
+                    border: "1px solid rgba(16,185,129,0.2)",
+                    borderRadius: 14,
+                    padding: "clamp(12px,3vw,20px)",
+                    textAlign: "center",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "clamp(20px,5vw,28px)",
+                      marginBottom: 6,
+                    }}
+                  >
+                    {e.icon}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "clamp(16px,4vw,24px)",
+                      fontWeight: 800,
+                      color: "#10b981",
+                      fontFamily: "'Orbitron', monospace",
+                      marginBottom: 4,
+                    }}
+                  >
+                    {e.val}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "clamp(10px,2.5vw,12px)",
+                      color: "#64748b",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {e.label}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
-      <div style={{ padding: "0 5vw 10vw" }}>
-        <SectionTitle label="Industries" title="Markets we power" />
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: "3vw",
-          }}
-        >
-          {industries.map((ind, i) => (
-            <IndustryCard key={i} {...ind} />
-          ))}
+      {/* ── Team ── */}
+      <div style={{ padding: "0 clamp(20px,6vw,60px) clamp(48px,8vw,72px)" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+          <div style={{ marginBottom: "clamp(24px,5vw,40px)" }}>
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                marginBottom: 10,
+              }}
+            >
+              <div
+                style={{
+                  width: 3,
+                  height: 18,
+                  borderRadius: 99,
+                  background: "#f59e0b",
+                }}
+              />
+              <span
+                style={{
+                  fontSize: "clamp(10px,2.5vw,12px)",
+                  fontWeight: 700,
+                  color: "#f59e0b",
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  fontFamily: "'Orbitron', monospace",
+                }}
+              >
+                The Team
+              </span>
+            </div>
+            <h2
+              style={{
+                fontSize: "clamp(22px,5.5vw,40px)",
+                fontWeight: 900,
+                color: "#f1f5f9",
+                fontFamily: "'Orbitron', monospace",
+                letterSpacing: "-0.02em",
+              }}
+            >
+              BUILT BY MINERS
+            </h2>
+          </div>
+          <div
+            className="team-grid"
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "clamp(10px,2.5vw,16px)",
+            }}
+          >
+            {team.map((m, i) => (
+              <TeamCard key={i} {...m} />
+            ))}
+          </div>
         </div>
       </div>
 
-      <div style={{ padding: "0 5vw 10vw" }}>
-        <SectionTitle label="The Team" title="Minds behind the machine" />
+      {/* ── Mission CTA ── */}
+      <div style={{ padding: "0 clamp(20px,6vw,60px) clamp(60px,12vw,100px)" }}>
         <div
           style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: "3vw",
-          }}
-        >
-          {team.map((m, i) => (
-            <TeamCard key={i} {...m} />
-          ))}
-        </div>
-      </div>
-
-      <div style={{ padding: "0 5vw 16vw" }}>
-        <div
-          style={{
-            borderRadius: 24,
-            background:
-              "linear-gradient(135deg,#ec4899 0%,#a855f7 55%,#7c3aed 100%)",
-            padding: "8vw 6vw",
+            maxWidth: 1200,
+            margin: "0 auto",
+            background: "linear-gradient(135deg,#111118,#1a1508,#111118)",
+            border: "1px solid rgba(245,158,11,0.3)",
+            borderRadius: 28,
+            padding: "clamp(32px,7vw,64px)",
             textAlign: "center",
             position: "relative",
             overflow: "hidden",
-            boxShadow: "0 16px 48px rgba(168,85,247,0.35)",
           }}
         >
+          {/* Decorative corners */}
           <div
             style={{
               position: "absolute",
-              top: "-30%",
-              left: "-10%",
-              width: "60vw",
-              height: "60vw",
-              borderRadius: "50%",
-              background: "rgba(255,255,255,0.07)",
-              pointerEvents: "none",
+              top: 0,
+              left: 0,
+              width: 60,
+              height: 60,
+              borderTop: "2px solid #f59e0b",
+              borderLeft: "2px solid #f59e0b",
+              borderRadius: "28px 0 0 0",
             }}
           />
           <div
             style={{
-              fontSize: "3.2vw",
+              position: "absolute",
+              bottom: 0,
+              right: 0,
+              width: 60,
+              height: 60,
+              borderBottom: "2px solid #f59e0b",
+              borderRight: "2px solid #f59e0b",
+              borderRadius: "0 0 28px 0",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%,-50%)",
+              width: "60%",
+              height: "60%",
+              background:
+                "radial-gradient(ellipse,rgba(245,158,11,0.08) 0%,transparent 70%)",
+              pointerEvents: "none",
+            }}
+          />
+
+          <div
+            style={{
+              fontSize: "clamp(10px,2.5vw,12px)",
               fontWeight: 700,
-              color: "rgba(255,255,255,0.65)",
-              letterSpacing: "0.1em",
+              color: "#f59e0b",
+              letterSpacing: "0.15em",
               textTransform: "uppercase",
-              marginBottom: "3vw",
+              fontFamily: "'Orbitron', monospace",
+              marginBottom: "clamp(12px,3vw,20px)",
             }}
           >
-            Our Mission
+            OUR MISSION
           </div>
           <h2
             style={{
-              fontSize: "7vw",
+              fontSize: "clamp(22px,6vw,48px)",
               fontWeight: 900,
-              color: "#fff",
-              lineHeight: 1.2,
-              marginBottom: "4vw",
-              fontFamily: "'Georgia', serif",
+              color: "#f1f5f9",
+              fontFamily: "'Orbitron', monospace",
+              lineHeight: 1.15,
+              letterSpacing: "-0.025em",
+              marginBottom: "clamp(14px,3vw,24px)",
             }}
           >
-            Democratize Wealth Through Intelligent Trading
+            MAKE CRYPTO MINING
+            <br />
+            <span
+              style={{
+                background: "linear-gradient(135deg,#f59e0b,#fbbf24,#f97316)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+              }}
+            >
+              ACCESSIBLE TO ALL
+            </span>
           </h2>
           <p
             style={{
-              fontSize: "3.6vw",
-              color: "rgba(255,255,255,0.75)",
-              lineHeight: 1.7,
+              fontSize: "clamp(13px,3.5vw,16px)",
+              color: "#94a3b8",
+              lineHeight: 1.75,
+              maxWidth: 560,
+              margin: "0 auto",
             }}
           >
-            We believe everyone deserves access to the same tools that hedge
-            funds and institutional traders use. Trust Pro is our promise to
-            make that a reality.
+            We believe mining shouldn't require a warehouse, an electrician, and
+            a cooling engineer. CryptoMine is our commitment to putting
+            institutional hash power in the hands of everyday people.
           </p>
         </div>
       </div>

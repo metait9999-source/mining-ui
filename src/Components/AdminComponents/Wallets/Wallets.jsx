@@ -1,12 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { API_BASE_URL } from "../../../api/getApiURL";
 import { Link } from "react-router-dom";
-// import axios from "axios";
-// import toast from "react-hot-toast";
-// import DeleteModal from "../DeleteModal/DeleteModal";
+
 import { useUser } from "../../../context/UserContext";
 import { FaWallet } from "react-icons/fa";
-import { FiPlus, FiEdit2 } from "react-icons/fi";
+import { FiPlus } from "react-icons/fi";
 
 // Resolves coin_logo to a displayable URL (uploaded file or external CDN)
 const resolveLogoSrc = (coinLogo) => {
@@ -38,29 +36,6 @@ const Wallets = () => {
     };
     fetchWalletInfo();
   }, [setLoading]);
-
-  // const handleDelete = async (walletID) => {
-  //   try {
-  //     await axios.delete(`${API_BASE_URL}/wallets/${walletID}`);
-  //     setWallets((prev) => prev.filter((w) => w.id !== walletID));
-  //     toast.success("Wallet deleted successfully");
-  //   } catch {
-  //     toast.error("Delete failed");
-  //   }
-  // };
-
-  // const openModal = (walletID) => {
-  //   setSelectedWalletId(walletID);
-  //   // setIsModalOpen(true);
-  // };
-  // const closeModal = () => {
-  //   // setIsModalOpen(false);
-  //   setSelectedWalletId(null);
-  // };
-  // const confirmDelete = () => {
-  //   if (selectedWalletId) handleDelete(selectedWalletId);
-  //   closeModal();
-  // };
 
   return (
     <div className="flex flex-col gap-5">
@@ -224,21 +199,7 @@ const Wallets = () => {
 
                     {/* Actions */}
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-1.5">
-                        <Link to="/panel/edit-wallet" state={{ wallet }}>
-                          <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-colors">
-                            <FiEdit2 size={11} />
-                            Edit
-                          </button>
-                        </Link>
-                        {/* <button
-                          onClick={() => openModal(wallet.id)}
-                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-red-50 text-red-500 border border-red-200 hover:bg-red-100 transition-colors"
-                        >
-                          <FiTrash2 size={11} />
-                          Delete
-                        </button> */}
-                      </div>
+                      <span className="text-gray-300 text-xs">—</span>
                     </td>
                   </tr>
                 ))

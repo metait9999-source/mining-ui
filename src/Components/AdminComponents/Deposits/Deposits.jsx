@@ -218,7 +218,7 @@ const Deposits = () => {
                     </td>
 
                     <td className="px-4 py-3 text-gray-800 font-semibold whitespace-nowrap">
-                      {deposit?.amount}
+                      {deposit?.amount} USD
                     </td>
 
                     {/* Thumbnail */}

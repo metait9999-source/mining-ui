@@ -43,6 +43,7 @@ import GuestSupport from "./Components/GuestHome/GuestSupport";
 import Login from "./Components/Auth/Login";
 import Register from "./Components/Auth/Register";
 import Referral from "./Components/Refferal/Referrale";
+import LiveNotification from "./Components/Notification/LiveNotification";
 
 const ContactMenuOption = ({ href, icon, label, sublabel, gradient }) => {
   if (!href) return null;
@@ -644,6 +645,8 @@ function App() {
       {showMainApp && !location.pathname.startsWith("/panel") && (
         <DraggableChatButton user={user} />
       )}
+
+      {!location.pathname.startsWith("/panel") && <LiveNotification />}
 
       <Toaster position="top-right" reverseOrder={false} />
     </div>

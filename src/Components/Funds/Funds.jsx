@@ -3,25 +3,24 @@ import axios from "axios";
 import { useUser } from "../../context/UserContext";
 import { useLocation } from "react-router";
 import { API_BASE_URL } from "../../api/getApiURL";
-import useFetchLatestDeposit from "../../hooks/useFetchLatestDeposit";
 import { useFetchUserBalance } from "../../hooks/useFetchUserBalance";
 import toast from "react-hot-toast";
-import { useUpdateUserBalance } from "../../hooks/useUpdateUserBalance";
 import useSettings from "../../hooks/useSettings";
 import Decimal from "decimal.js";
 import { useSocketContext } from "../../context/SocketContext";
 import useWallets from "../../hooks/useWallets";
 import AppNav from "../Home/Navbar";
 import QRCode from "qrcode";
+import { useUpdateUserBalance } from "../../hooks/useUpdateUserBalance";
 
-const COINLORE_IDS = {
-  TRX: 2713,
-  ETH: 80,
-  BTC: 90,
-  USDT: 518,
-  "USDT-TRC20": 518,
-  "USDT-ERC20": 518,
-};
+// const COINLORE_IDS = {
+//   TRX: 2713,
+//   ETH: 80,
+//   BTC: 90,
+//   USDT: 518,
+//   "USDT-TRC20": 518,
+//   "USDT-ERC20": 518,
+// };
 
 const resolveLogoSrc = (wallet) => {
   if (!wallet) return null;
@@ -78,8 +77,6 @@ const CoinLogo = ({ wallet, size = 24 }) => {
   );
 };
 
-// ─── QR component: generates canvas from address ──────────────────────────
-
 const AddressQR = ({ address, size = 180 }) => {
   const [dataUrl, setDataUrl] = useState(null);
   const [error, setError] = useState(false);
@@ -88,7 +85,7 @@ const AddressQR = ({ address, size = 180 }) => {
     if (!address) return;
     setError(false);
     QRCode.toDataURL(address, {
-      width: size * 2, // 2× for retina
+      width: size * 2,
       margin: 1,
       color: { dark: "#000000", light: "#ffffff" },
       errorCorrectionLevel: "M",
@@ -179,8 +176,6 @@ const AddressQR = ({ address, size = 180 }) => {
   );
 };
 
-// ─── styles ────────────────────────────────────────────────────────────────
-
 const inputWrap = {
   display: "flex",
   alignItems: "center",
@@ -203,8 +198,6 @@ const labelStyle = {
   fontFamily: "'Rajdhani',sans-serif",
 };
 
-// ─── address resolver ─────────────────────────────────────────────────────
-
 function getDepositAddress(addresses, coinId) {
   if (!addresses || !coinId) return null;
   switch (coinId) {
@@ -221,7 +214,134 @@ function getDepositAddress(addresses, coinId) {
   }
 }
 
-// ─── main component ───────────────────────────────────────────────────────
+// ── Check result status display ───────────────────────────────────────────────
+const CheckResult = ({ result, coinSymbol, onClose }) => {
+  if (!result) return null;
+
+  const isCredited = result.status === "credited";
+  const isPending = result.status === "not_found";
+
+  const color = isCredited ? "#10b981" : isPending ? "#f59e0b" : "#3b82f6";
+  const icon = isCredited ? "✓" : isPending ? "⏳" : "ℹ";
+  const title = isCredited
+    ? "Deposit Credited!"
+    : isPending
+      ? "Not Detected Yet"
+      : "Already Credited";
+
+  return (
+    <div
+      className="slide-up mt-4 rounded-2xl overflow-hidden"
+      style={{ border: `1px solid ${color}30`, background: `${color}08` }}
+    >
+      <div
+        className="flex items-center gap-3 px-5 py-4"
+        style={{ borderBottom: `1px solid ${color}18` }}
+      >
+        <div
+          className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 raj font-black text-base"
+          style={{ background: `${color}18`, color }}
+        >
+          {icon}
+        </div>
+        <div>
+          <p className="orb font-black text-sm" style={{ color: "#f1f5f9" }}>
+            {title}
+          </p>
+          <p
+            className="raj font-medium text-xs mt-0.5"
+            style={{ color: "#64748b" }}
+          >
+            {result.message}
+          </p>
+        </div>
+      </div>
+
+      {isCredited && (
+        <div className="flex flex-col gap-2 p-4">
+          <div
+            className="flex items-center justify-between px-4 py-2.5 rounded-xl"
+            style={{
+              background: "rgba(16,185,129,0.06)",
+              border: "1px solid rgba(16,185,129,0.15)",
+            }}
+          >
+            <span
+              className="raj font-semibold text-xs"
+              style={{ color: "#475569" }}
+            >
+              USD Credited
+            </span>
+            <span
+              className="orb font-black text-sm"
+              style={{ color: "#10b981" }}
+            >
+              ${parseFloat(result.usdAmount || 0).toFixed(4)}
+            </span>
+          </div>
+          <div
+            className="flex items-center justify-between px-4 py-2.5 rounded-xl"
+            style={{
+              background: "rgba(255,255,255,0.02)",
+              border: "1px solid rgba(255,255,255,0.06)",
+            }}
+          >
+            <span
+              className="raj font-semibold text-xs"
+              style={{ color: "#475569" }}
+            >
+              Raw Amount
+            </span>
+            <span
+              className="raj font-bold text-sm"
+              style={{ color: "#f1f5f9" }}
+            >
+              {result.rawAmount} {coinSymbol}
+            </span>
+          </div>
+          {result.txHash && (
+            <div
+              className="flex items-center justify-between px-4 py-2.5 rounded-xl"
+              style={{
+                background: "rgba(255,255,255,0.02)",
+                border: "1px solid rgba(255,255,255,0.06)",
+              }}
+            >
+              <span
+                className="raj font-semibold text-xs"
+                style={{ color: "#475569" }}
+              >
+                TX Hash
+              </span>
+              <span
+                className="raj font-medium text-xs"
+                style={{ color: "#64748b" }}
+              >
+                {result.txHash.slice(0, 10)}...{result.txHash.slice(-6)}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="px-4 pb-4">
+        <button
+          onClick={onClose}
+          className="act w-full py-3 rounded-xl raj font-bold text-xs border-none cursor-pointer"
+          style={{
+            background: "rgba(255,255,255,0.05)",
+            color: "#64748b",
+            letterSpacing: 1.5,
+          }}
+        >
+          DISMISS
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 const Funds = () => {
   const location = useLocation();
@@ -229,29 +349,26 @@ const Funds = () => {
   const { settings } = useSettings();
   const { user, setLoading } = useUser();
   const [activeTab, setActiveTab] = useState("receive");
-  const [timeLeft, setTimeLeft] = useState(null);
-  const [rechargeModal, setRechargeModal] = useState(false);
-  const [rechargeStep, setRechargeStep] = useState(1);
-  const [rechargeResult, setRechargeResult] = useState(null);
-  const [amount, setAmount] = useState("");
+  const [addressCopied, setAddressCopied] = useState(false);
+  const [qrModalVisible, setQrModalVisible] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [withdrawAddress, setWithdrawAddress] = useState("");
   const [availableBalance, setAvailableBalance] = useState("");
-  const { socket } = useSocketContext();
-  const { updateUserBalance } = useUpdateUserBalance();
-  const { wallets } = useWallets(user?.id);
   const [convertAmount, setConvertAmount] = useState("");
   const [convertedResult, setConvertedResult] = useState("0.00");
   const [isConverting, setIsConverting] = useState(false);
-  const [qrModalVisible, setQrModalVisible] = useState(false);
-  const [addressCopied, setAddressCopied] = useState(false);
-  const [screenshot, setScreenshot] = useState(null);
-  const [preview, setPreview] = useState(null);
-  const [modalUsdPreview, setModalUsdPreview] = useState(null);
-  const [modalPriceLoading, setModalPriceLoading] = useState(false);
-  const modalPriceRef = useRef(null);
 
-  // user-specific deposit addresses
+  // ── Deposit check state ───────────────────────────────────────────────────
+  const [checking, setChecking] = useState(false);
+  const [checkResult, setCheckResult] = useState(null);
+
+  const { socket } = useSocketContext();
+  const { updateUserBalance } = useUpdateUserBalance();
+  const { wallets } = useWallets(user?.id);
+  const coinGeckoIdRef = useRef(null);
+  const coinPriceRef = useRef(null);
+
+  // ── Deposit addresses ─────────────────────────────────────────────────────
   const [depositAddresses, setDepositAddresses] = useState(null);
   useEffect(() => {
     if (!user?.id) return;
@@ -263,11 +380,6 @@ const Funds = () => {
 
   const depositAddress = getDepositAddress(depositAddresses, wallet?.coin_id);
 
-  const {
-    data: latestDeposit,
-    loading,
-    refetch,
-  } = useFetchLatestDeposit(user?.id, wallet?.coin_id);
   const { balance, refetch: refetchUserBalance } = useFetchUserBalance(
     user?.id,
     wallet?.coin_id,
@@ -275,58 +387,31 @@ const Funds = () => {
   const [localCoinBalance, setLocalCoinBalance] = useState(null);
 
   useEffect(() => {
-    if (balance?.coin_amount !== undefined)
-      setLocalCoinBalance(parseFloat(balance.coin_amount));
-  }, [balance?.coin_amount]);
+    if (balance?.usd_amount !== undefined)
+      setLocalCoinBalance(parseFloat(balance.usd_amount));
+  }, [balance?.usd_amount]);
 
   const displayBalance =
-    localCoinBalance ?? parseFloat(balance?.coin_amount || 0);
+    localCoinBalance ?? parseFloat(balance?.usd_amount || 0);
   const usdtWallet = wallets?.find((w) => w.coin_symbol === "USDT");
-  const coinGeckoIdRef = useRef(null);
-  const coinPriceRef = useRef(null);
 
   useEffect(() => {
     coinGeckoIdRef.current = null;
     coinPriceRef.current = null;
   }, [wallet?.coin_symbol]);
 
+  // ── USD display for balance ───────────────────────────────────────────────
   const getConvertedAmount = useCallback(async () => {
-    if (!balance?.coin_amount || !wallet?.coin_id) return;
-    const symbol = wallet?.coin_symbol?.toUpperCase();
-    if (
-      ["USDT", "USDT-TRC20", "USDT-ERC20"].includes(symbol) ||
-      ["USDT", "USDT-TRC20", "USDT-ERC20"].includes(wallet?.coin_id)
-    ) {
-      setAvailableBalance(parseFloat(balance.coin_amount).toFixed(4));
-      return;
-    }
-    const coinloreId = COINLORE_IDS[symbol] || COINLORE_IDS[wallet?.coin_id];
-    if (!coinloreId) {
-      setAvailableBalance(parseFloat(balance.coin_amount).toFixed(8));
-      return;
-    }
-    try {
-      const res = await fetch(
-        `https://api.coinlore.net/api/ticker/?id=${coinloreId}`,
-      );
-      const data = await res.json();
-      const price = parseFloat(data?.[0]?.price_usd || 0);
-      if (price > 0) {
-        setAvailableBalance(
-          (parseFloat(balance.coin_amount) * price).toFixed(2),
-        );
-      } else {
-        setAvailableBalance("0.00");
-      }
-    } catch {
-      setAvailableBalance("0.00000000");
-    }
-  }, [balance?.coin_amount, wallet?.coin_id, wallet?.coin_symbol]);
+    if (!balance?.usd_amount || !wallet?.coin_id) return;
+    // balance is already USD — just display it directly
+    setAvailableBalance(parseFloat(balance.usd_amount).toFixed(4));
+  }, [balance?.usd_amount, wallet?.coin_id]);
 
   useEffect(() => {
     getConvertedAmount();
   }, [getConvertedAmount]);
 
+  // ── Convert tab price ─────────────────────────────────────────────────────
   const getCoinGeckoId = async (symbol) => {
     if (!symbol) return null;
     if (symbol.toUpperCase() === "USDT") return "tether";
@@ -379,13 +464,21 @@ const Funds = () => {
     );
   }, [convertAmount]);
 
+  // ── Socket listeners ──────────────────────────────────────────────────────
   useEffect(() => {
-    setLoading(loading);
-  }, [loading, setLoading]);
+    const handler = (data) => {
+      if (data?.coin_id === wallet?.coin_id) {
+        toast.success(`Deposit of $${data.usdAmount} USD approved!`);
+        refetchUserBalance();
+      }
+    };
+    socket?.on("depositApproved", handler);
+    return () => socket?.off("depositApproved", handler);
+  }, [socket, wallet?.coin_id, refetchUserBalance]);
 
+  // ── Copy address ──────────────────────────────────────────────────────────
   const handleCopyAddress = () => {
-    const address = depositAddress;
-    if (!address) {
+    if (!depositAddress) {
       toast.error("No address to copy");
       return;
     }
@@ -406,56 +499,47 @@ const Funds = () => {
       }
     };
     navigator.clipboard
-      ?.writeText(address)
+      ?.writeText(depositAddress)
       .then(() => {
         toast.success("Address copied!");
         setAddressCopied(true);
         setTimeout(() => setAddressCopied(false), 3000);
       })
-      .catch(() => copy(address)) || copy(address);
+      .catch(() => copy(depositAddress)) || copy(depositAddress);
   };
 
-  const handleRechargeSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    if (!amount) {
-      toast.error("Please provide amount");
-      setLoading(false);
+  // ── CHECK DEPOSIT — the main action ──────────────────────────────────────
+  const handleCheckDeposit = async () => {
+    if (!user?.id || !wallet?.coin_id) {
+      toast.error("Missing user or coin info");
       return;
     }
-    const formData = new FormData();
-    formData.append("user_id", user.id);
-    formData.append("wallet_to", wallet?.wallet_address);
-    formData.append("wallet_from", user?.user_wallet);
-    formData.append("coin_id", wallet?.coin_id);
-    formData.append("trans_hash", "#ex3j3h2sh");
-    formData.append("amount", amount);
-    formData.append("documents", screenshot);
+    setChecking(true);
+    setCheckResult(null);
     try {
-      await axios.post(`${API_BASE_URL}/deposits`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+      const res = await axios.post(`${API_BASE_URL}/deposits/check`, {
+        userId: user.id,
+        coinId: wallet.coin_id,
       });
-      setLoading(false);
-      setAmount("");
-      setScreenshot(null);
-      setPreview(null);
-      refetch();
-      setRechargeModal(false);
+      setCheckResult(res.data);
+      if (res.data.status === "credited") {
+        toast.success("Deposit detected and credited!");
+        refetchUserBalance();
+      } else if (res.data.status === "already_credited") {
+        toast("Already credited to your account", { icon: "ℹ️" });
+      } else {
+        toast("No deposit detected yet. Try again after sending.", {
+          icon: "⏳",
+        });
+      }
     } catch (err) {
-      toast.error(err?.response?.data?.error || "Failed to deposit request");
-      setLoading(false);
+      toast.error(err?.response?.data?.error || "Check failed");
+    } finally {
+      setChecking(false);
     }
   };
 
-  const closeRechargeModal = () => {
-    setRechargeModal(false);
-    setRechargeStep(1);
-    setAmount("");
-    setScreenshot(null);
-    setPreview(null);
-    setRechargeResult(null);
-  };
-
+  // ── Withdraw ──────────────────────────────────────────────────────────────
   const handleWithdrawSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -485,9 +569,9 @@ const Funds = () => {
       setLoading(false);
       setWithdrawAmount("");
       setWithdrawAddress("");
-      const nb =
-        new Decimal(displayBalance).d[0] -
-        new Decimal(parseFloat(withdrawAmount)).d[0];
+      const nb = new Decimal(displayBalance)
+        .minus(new Decimal(parseFloat(withdrawAmount)))
+        .toNumber();
       updateUserBalance(user?.id, wallet?.coin_id, nb);
     } catch (err) {
       setLoading(false);
@@ -501,6 +585,7 @@ const Funds = () => {
     });
   };
 
+  // ── Convert ───────────────────────────────────────────────────────────────
   const handleConvertSubmit = async () => {
     if (user.is_frozen) {
       toast.error("Account is frozen. Contact support.");
@@ -516,11 +601,7 @@ const Funds = () => {
       toast.error("Price not loaded, try again");
       return;
     }
-    const maxAvailable =
-      coinSymbol === "USDT"
-        ? displayBalance
-        : parseFloat(availableBalance || 0);
-    if (coinAmt > maxAvailable) {
+    if (coinAmt > displayBalance) {
       toast.error("Exceeds available balance");
       return;
     }
@@ -536,13 +617,13 @@ const Funds = () => {
         await updateBalanceDirect(
           user.id,
           usdtWallet.coin_id,
-          parseFloat(usdtWallet?.coin_amount || 0) + usdtEq,
+          parseFloat(usdtWallet?.usd_amount || 0) + usdtEq,
         );
       setLocalCoinBalance(displayBalance - usdtEq);
       setConvertAmount("");
       setConvertedResult("0.00");
       toast.success(
-        `Converted ${coinAmt} ${coinSymbol} → ${usdtEq.toFixed(2)} USDT`,
+        `Converted ${coinAmt} ${coinSymbol} → $${usdtEq.toFixed(2)} USDT`,
       );
       try {
         refetchUserBalance();
@@ -554,71 +635,6 @@ const Funds = () => {
     }
   };
 
-  const getFormattedDeliveryTime = (ca) =>
-    new Date(ca)
-      .toLocaleString("en-US", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: true,
-      })
-      .replace(",", "");
-
-  useEffect(() => {
-    if (!latestDeposit?.created_at) return;
-    const end = new Date(
-      new Date(getFormattedDeliveryTime(latestDeposit.created_at)).getTime() +
-        3600000,
-    );
-    const tick = () => {
-      if (["approved", "rejected"].includes(latestDeposit?.status)) {
-        setTimeLeft("");
-        return;
-      }
-      const diff = end - new Date();
-      if (diff <= 0) {
-        setTimeLeft("");
-        return;
-      }
-      const h = String(Math.floor(diff / 3600000)).padStart(2, "0");
-      const m = String(Math.floor((diff % 3600000) / 60000)).padStart(2, "0");
-      const s = String(Math.floor((diff % 60000) / 1000)).padStart(2, "0");
-      setTimeLeft(`${h}:${m}:${s}`);
-    };
-    tick();
-    const t = setInterval(tick, 1000);
-    return () => clearInterval(t);
-  }, [latestDeposit]);
-
-  useEffect(() => {
-    const handler = (data) => {
-      if (data?.deposit.status === "approved")
-        toast.success("Deposit accepted");
-      else toast.error("Deposit rejected");
-      if (["approved", "rejected"].includes(data?.deposit.status)) {
-        refetch();
-        refetchUserBalance();
-      }
-    };
-    socket?.on("updateDeposit", handler);
-    return () => socket?.off("updateDeposit", handler);
-  }, [socket, refetch, refetchUserBalance]);
-
-  useEffect(() => {
-    const handler = (data) => {
-      if (data?.coin_id === wallet?.coin_id) {
-        toast.success(`Deposit of ${data.amount} ${data.coin_id} approved!`);
-        refetch();
-        refetchUserBalance();
-      }
-    };
-    socket?.on("depositApproved", handler);
-    return () => socket?.off("depositApproved", handler);
-  }, [socket, wallet?.coin_id, refetch, refetchUserBalance]);
-
   const coinSymbol = wallet?.coin_symbol || "BTC";
   const isStablecoin =
     ["USDT", "USDT-TRC20", "USDT-ERC20"].includes(coinSymbol) ||
@@ -626,55 +642,6 @@ const Funds = () => {
   const TABS = ["receive", "send", "convert"];
   const tabColor = { receive: "#f59e0b", send: "#10b981", convert: "#3b82f6" };
   const activeColor = tabColor[activeTab];
-
-  const coinAmountDisplay = (() => {
-    if (coinSymbol === "USDT") return `${displayBalance.toFixed(4)} USDT`;
-    if (availableBalance && parseFloat(availableBalance) > 0)
-      return `${availableBalance} ${coinSymbol}`;
-    return `${displayBalance.toFixed(4)} ${coinSymbol}`;
-  })();
-
-  // Fetch live price when modal opens
-  useEffect(() => {
-    if (!rechargeModal) return;
-    const symbol = wallet?.coin_symbol?.toUpperCase();
-    if (!symbol) return;
-    if (isStablecoin) {
-      modalPriceRef.current = 1;
-      return;
-    }
-    const coinloreId = COINLORE_IDS[symbol] || COINLORE_IDS[wallet?.coin_id];
-    if (!coinloreId) {
-      modalPriceRef.current = null;
-      return;
-    }
-    setModalPriceLoading(true);
-    fetch(`https://api.coinlore.net/api/ticker/?id=${coinloreId}`)
-      .then((r) => r.json())
-      .then((data) => {
-        modalPriceRef.current = parseFloat(data?.[0]?.price_usd || 0) || null;
-      })
-      .catch(() => {
-        modalPriceRef.current = null;
-      })
-      .finally(() => setModalPriceLoading(false));
-  }, [rechargeModal, wallet?.coin_symbol, wallet?.coin_id]);
-
-  useEffect(() => {
-    if (!amount || parseFloat(amount) <= 0) {
-      setModalUsdPreview(null);
-      return;
-    }
-    // Don't calculate while price is still loading
-    if (modalPriceLoading) return;
-
-    const price = modalPriceRef.current;
-    if (!price) {
-      setModalUsdPreview(null);
-      return;
-    }
-    setModalUsdPreview((parseFloat(amount) * price).toFixed(2));
-  }, [amount, modalPriceLoading]);
 
   return (
     <div
@@ -704,7 +671,6 @@ const Funds = () => {
         .step-card{transition:all .2s}
         .step-card:hover{transform:translateX(3px)}
         .spin{animation:spin 1s linear infinite}
-        .modal-in{animation:fadeIn .25s ease both}
         .slide-up{animation:slideUp .3s ease both}
       `}</style>
 
@@ -801,13 +767,7 @@ const Funds = () => {
                       USD
                     </span>
                   </div>
-                  <p
-                    className="raj font-semibold text-sm mb-3"
-                    style={{ color: "#f59e0b" }}
-                  >
-                    ≈ {coinAmountDisplay}
-                  </p>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 mt-2">
                     <div className="relative w-2 h-2 flex-shrink-0">
                       <div
                         className="absolute inset-0 rounded-full"
@@ -832,15 +792,11 @@ const Funds = () => {
                 <div className="flex flex-wrap gap-3">
                   {[
                     {
-                      lbl: "Balance",
+                      lbl: "USD Balance",
                       val: `$${displayBalance.toFixed(2)}`,
                       color: "#f59e0b",
                     },
-                    {
-                      lbl: "In Coins",
-                      val: coinAmountDisplay,
-                      color: "#3b82f6",
-                    },
+                    { lbl: "Coin", val: coinSymbol, color: "#3b82f6" },
                   ].map((s) => (
                     <div
                       key={s.lbl}
@@ -887,7 +843,11 @@ const Funds = () => {
                         activeTab === t
                           ? `rgba(${t === "receive" ? "245,158,11" : t === "send" ? "16,185,129" : "59,130,246"},0.12)`
                           : "rgba(255,255,255,0.02)",
-                      border: `1px solid ${activeTab === t ? `rgba(${t === "receive" ? "245,158,11" : t === "send" ? "16,185,129" : "59,130,246"},0.3)` : "rgba(255,255,255,0.06)"}`,
+                      border: `1px solid ${
+                        activeTab === t
+                          ? `rgba(${t === "receive" ? "245,158,11" : t === "send" ? "16,185,129" : "59,130,246"},0.3)`
+                          : "rgba(255,255,255,0.06)"
+                      }`,
                     }}
                   >
                     <div
@@ -998,7 +958,6 @@ const Funds = () => {
                   border: `1px solid rgba(${activeTab === "receive" ? "245,158,11" : activeTab === "send" ? "16,185,129" : "59,130,246"},0.14)`,
                 }}
               >
-                {/* Panel top bar */}
                 <div
                   className="flex items-center justify-between px-6 py-5"
                   style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}
@@ -1021,113 +980,25 @@ const Funds = () => {
                   </div>
                 </div>
 
-                {/* ══════════ RECEIVE TAB ══════════ */}
                 {activeTab === "receive" && (
-                  <div className="px-6 py-3 md:px-8 md:py-5">
-                    {timeLeft && (
-                      <div
-                        className="flex items-center gap-4 p-4 rounded-2xl mb-6"
-                        style={{
-                          background: "rgba(16,185,129,0.08)",
-                          border: "1px solid rgba(16,185,129,0.2)",
-                        }}
-                      >
-                        <div
-                          className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                          style={{
-                            background: "rgba(16,185,129,0.15)",
-                            color: "#10b981",
-                          }}
-                        >
-                          <svg
-                            width="18"
-                            height="18"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                          >
-                            <circle
-                              cx="12"
-                              cy="12"
-                              r="10"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                            />
-                            <path
-                              d="M12 6v6l4 2"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                            />
-                          </svg>
-                        </div>
-                        <div>
-                          <p
-                            className="raj font-semibold text-xs mb-0.5"
-                            style={{ color: "#64748b" }}
-                          >
-                            Verification in progress
-                          </p>
-                          <p
-                            className="orb font-black text-xl"
-                            style={{ color: "#10b981" }}
-                          >
-                            {timeLeft}
-                          </p>
-                        </div>
-                      </div>
-                    )}
+                  <div className="px-6 py-0 md:px-8">
+                    {/* ── CHECK RESULT ── */}
+                    <CheckResult
+                      result={checkResult}
+                      coinSymbol={coinSymbol}
+                      onClose={() => setCheckResult(null)}
+                    />
 
-                    {/* ── RECHARGE BUTTON AT TOP ── */}
-                    <div className="">
-                      <button
-                        onClick={() => {
-                          setRechargeModal(true);
-                          setRechargeStep(1);
-                        }}
-                        className="act w-full py-4 rounded-2xl raj font-black text-sm border-none cursor-pointer flex items-center justify-center gap-3"
-                        style={{
-                          background: "linear-gradient(135deg,#f59e0b,#f97316)",
-                          color: "#080810",
-                          letterSpacing: 2,
-                          boxShadow: "0 6px 24px rgba(245,158,11,0.35)",
-                        }}
-                      >
-                        <svg
-                          width="18"
-                          height="18"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                        >
-                          <path
-                            d="M12 2v14M5 9l7 7 7-7M3 20h18"
-                            stroke="#080810"
-                            strokeWidth="2.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                        I SENT — SUBMIT RECHARGE
-                      </button>
-                      <p
-                        className="raj font-semibold text-xs text-center mt-2"
-                        style={{ color: "#475569" }}
-                      >
-                        Already sent {coinSymbol} to your address? Tap above to
-                        notify us
-                      </p>
-                    </div>
-
-                    {/* divider */}
                     <div
-                      className="mb-6"
+                      className="my-6"
                       style={{
                         height: 1,
                         background: "rgba(255,255,255,0.06)",
                       }}
                     />
 
+                    {/* ── ADDRESS + QR ── */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* Left: address */}
                       <div>
                         <label style={labelStyle}>
                           Your Unique Deposit Address
@@ -1229,13 +1100,69 @@ const Funds = () => {
                             </span>
                           </div>
                         )}
+
+                        {/* ── ACTION BUTTON — visible only on mobile (below address) ── */}
+                        <div className="block md:hidden mt-3">
+                          <button
+                            onClick={handleCheckDeposit}
+                            disabled={checking}
+                            className="act w-full py-4 rounded-2xl raj font-black text-sm border-none cursor-pointer flex items-center justify-center gap-3 mb-2"
+                            style={{
+                              background: checking
+                                ? "rgba(245,158,11,0.2)"
+                                : "linear-gradient(135deg,#f59e0b,#f97316)",
+                              color: checking ? "#f59e0b" : "#080810",
+                              letterSpacing: 2,
+                              boxShadow: checking
+                                ? "none"
+                                : "0 6px 24px rgba(245,158,11,0.35)",
+                              cursor: checking ? "not-allowed" : "pointer",
+                            }}
+                          >
+                            {checking ? (
+                              <>
+                                <div
+                                  className="spin w-4 h-4 rounded-full flex-shrink-0"
+                                  style={{
+                                    border: "2px solid #f59e0b",
+                                    borderTopColor: "transparent",
+                                  }}
+                                />
+                                CHECKING ON-CHAIN…
+                              </>
+                            ) : (
+                              <>
+                                <svg
+                                  width="18"
+                                  height="18"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                >
+                                  <path
+                                    d="M12 2v14M5 9l7 7 7-7M3 20h18"
+                                    stroke="#080810"
+                                    strokeWidth="2.5"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  />
+                                </svg>
+                                I SENT — RECHARGE COMPLETED
+                              </>
+                            )}
+                          </button>
+                          <p
+                            className="raj font-semibold text-xs text-center mb-2"
+                            style={{ color: "#475569" }}
+                          >
+                            Already sent {coinSymbol} to your address? Tap above
+                            — we'll verify on-chain
+                          </p>
+                        </div>
                       </div>
 
-                      {/* Right: GENERATED QR from depositAddress */}
                       <div className="flex flex-col items-center">
                         {depositAddress ? (
                           <>
-                            {/* QR container — click to enlarge */}
                             <div
                               className="p-3 rounded-2xl mb-4 cursor-pointer"
                               style={{
@@ -1272,8 +1199,67 @@ const Funds = () => {
                       </div>
                     </div>
 
+                    {/* ── ACTION BUTTON — visible only on desktop/tablet (above how-to) ── */}
+                    <div className="hidden md:block mt-5">
+                      <button
+                        onClick={handleCheckDeposit}
+                        disabled={checking}
+                        className="act w-full py-4 rounded-2xl raj font-black text-sm border-none cursor-pointer flex items-center justify-center gap-3 mb-2"
+                        style={{
+                          background: checking
+                            ? "rgba(245,158,11,0.2)"
+                            : "linear-gradient(135deg,#f59e0b,#f97316)",
+                          color: checking ? "#f59e0b" : "#080810",
+                          letterSpacing: 2,
+                          boxShadow: checking
+                            ? "none"
+                            : "0 6px 24px rgba(245,158,11,0.35)",
+                          cursor: checking ? "not-allowed" : "pointer",
+                        }}
+                      >
+                        {checking ? (
+                          <>
+                            <div
+                              className="spin w-4 h-4 rounded-full flex-shrink-0"
+                              style={{
+                                border: "2px solid #f59e0b",
+                                borderTopColor: "transparent",
+                              }}
+                            />
+                            CHECKING ON-CHAIN…
+                          </>
+                        ) : (
+                          <>
+                            <svg
+                              width="18"
+                              height="18"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                            >
+                              <path
+                                d="M12 2v14M5 9l7 7 7-7M3 20h18"
+                                stroke="#080810"
+                                strokeWidth="2.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                            I SENT — RECHARGE COMPLETED
+                          </>
+                        )}
+                      </button>
+                      <p
+                        className="raj font-semibold text-xs text-center mb-5"
+                        style={{ color: "#475569" }}
+                      >
+                        Already sent {coinSymbol} to your address? Tap above —
+                        we'll verify on-chain
+                      </p>
+                    </div>
+
+                    {/* ── HOW TO DEPOSIT ── */}
                     <div
-                      className="rounded-2xl overflow-hidden mt-3"
+                      className="rounded-2xl overflow-hidden mt-4"
                       style={{ border: "1px solid rgba(255,255,255,0.07)" }}
                     >
                       <div
@@ -1294,26 +1280,25 @@ const Funds = () => {
                         {
                           num: "1",
                           text: `Copy your ${coinSymbol} address above`,
-                          icon: "📋",
-                          highlight: false,
                           done: addressCopied,
+                          highlight: false,
                         },
                         {
                           num: "2",
                           text: `Send ${coinSymbol} to that address from your wallet`,
-                          icon: "📤",
+                          done: false,
                           highlight: false,
                         },
                         {
                           num: "3",
-                          text: "Return here and click the button below",
-                          icon: "🔔",
+                          text: `Come back and tap "I SENT — RECHARGE COMPLETED"`,
+                          done: false,
                           highlight: true,
                         },
                         {
                           num: "4",
-                          text: "Enter the amount you sent — system will verify",
-                          icon: "✅",
+                          text: "System verifies on-chain and credits your USD balance",
+                          done: false,
                           highlight: false,
                         },
                       ].map((s, i) => (
@@ -1443,7 +1428,7 @@ const Funds = () => {
                         <div>
                           <div className="flex items-center justify-between mb-2">
                             <label style={{ ...labelStyle, marginBottom: 0 }}>
-                              Amount
+                              Amount (USD)
                             </label>
                             <span
                               className="raj font-medium text-xs"
@@ -1470,7 +1455,7 @@ const Funds = () => {
                               className="raj font-semibold text-xs flex-shrink-0"
                               style={{ color: "#475569" }}
                             >
-                              {coinSymbol}
+                              USD
                             </span>
                             <div
                               className="w-px h-4 flex-shrink-0"
@@ -1478,7 +1463,7 @@ const Funds = () => {
                             />
                             <button
                               onClick={() =>
-                                setWithdrawAmount(balance?.coin_amount)
+                                setWithdrawAmount(String(displayBalance))
                               }
                               className="flex-shrink-0 raj font-bold text-xs border-none cursor-pointer act"
                               style={{ background: "none", color: "#f59e0b" }}
@@ -1525,7 +1510,7 @@ const Funds = () => {
                             lbl: "Network",
                             val: wallet?.wallet_network || "—",
                           },
-                          { lbl: "Currency", val: coinSymbol },
+                          { lbl: "Currency", val: "USD" },
                           {
                             lbl: "Min. Amount",
                             val: `$${settings?.withdrawal_limit || 0}`,
@@ -1567,14 +1552,13 @@ const Funds = () => {
                         <div>
                           <div className="flex items-center justify-between mb-2">
                             <label style={{ ...labelStyle, marginBottom: 0 }}>
-                              From
+                              From (USD)
                             </label>
                             <span
                               className="raj font-medium text-xs"
                               style={{ color: "#475569" }}
                             >
-                              {availableBalance || "0.00"} {coinSymbol}{" "}
-                              available
+                              ${displayBalance.toFixed(4)} available
                             </span>
                           </div>
                           <div
@@ -1601,13 +1585,9 @@ const Funds = () => {
                               }}
                             />
                             <button
-                              onClick={() => {
-                                const maxVal =
-                                  coinSymbol === "USDT"
-                                    ? String(displayBalance)
-                                    : String(availableBalance || "0");
-                                setConvertAmount(maxVal);
-                              }}
+                              onClick={() =>
+                                setConvertAmount(String(displayBalance))
+                              }
                               className="raj font-bold text-xs border-none cursor-pointer act flex-shrink-0"
                               style={{ background: "none", color: "#f59e0b" }}
                             >
@@ -1755,576 +1735,7 @@ const Funds = () => {
         </div>
       </div>
 
-      {/* ══════════ RECHARGE MODAL ══════════ */}
-      {rechargeModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-end md:items-center justify-center"
-          style={{
-            background: "rgba(0,0,0,0.85)",
-            backdropFilter: "blur(8px)",
-          }}
-          onClick={closeRechargeModal}
-        >
-          <div
-            className="modal-in relative w-full md:max-w-md rounded-t-3xl md:rounded-3xl overflow-hidden"
-            style={{
-              background: "#0d0d1a",
-              border: "1px solid rgba(245,158,11,0.2)",
-              maxHeight: "95vh",
-              overflowY: "auto",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-center pt-3 pb-1 md:hidden">
-              <div
-                className="w-10 h-1 rounded-full"
-                style={{ background: "#1e293b" }}
-              />
-            </div>
-            <div
-              className="h-px"
-              style={{
-                background:
-                  "linear-gradient(90deg,transparent,#f59e0b,#f97316,transparent)",
-              }}
-            />
-
-            {rechargeStep === 1 && (
-              <div className="p-6 slide-up">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-9 h-9 rounded-xl flex items-center justify-center"
-                      style={{
-                        background: "rgba(245,158,11,0.12)",
-                        border: "1px solid rgba(245,158,11,0.2)",
-                      }}
-                    >
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                      >
-                        <path
-                          d="M12 2v14M5 9l7 7 7-7M3 20h18"
-                          stroke="#f59e0b"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </div>
-                    <div>
-                      <p
-                        className="orb font-black text-sm"
-                        style={{ color: "#f1f5f9" }}
-                      >
-                        Submit Recharge
-                      </p>
-                      <p className="raj text-xs" style={{ color: "#475569" }}>
-                        Step 1 of 2 — Enter amount
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={closeRechargeModal}
-                    className="w-8 h-8 flex items-center justify-center rounded-full border-none cursor-pointer"
-                    style={{ background: "rgba(255,255,255,0.05)" }}
-                  >
-                    <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-                      <path
-                        d="M2 2l10 10M12 2L2 12"
-                        stroke="#64748b"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                  </button>
-                </div>
-
-                <div className="flex flex-col gap-2 mb-5">
-                  {[
-                    { lbl: "Coin", val: wallet?.coin_symbol },
-                    { lbl: "Network", val: wallet?.wallet_network },
-                    {
-                      lbl: "Your Address",
-                      val: depositAddress
-                        ? `${depositAddress.slice(0, 12)}...${depositAddress.slice(-8)}`
-                        : "Loading...",
-                    },
-                  ].map((r) => (
-                    <div
-                      key={r.lbl}
-                      className="flex items-center justify-between px-4 py-3 rounded-xl"
-                      style={{
-                        background: "rgba(255,255,255,0.02)",
-                        border: "1px solid rgba(255,255,255,0.06)",
-                      }}
-                    >
-                      <span
-                        className="raj font-semibold text-xs"
-                        style={{ color: "#475569" }}
-                      >
-                        {r.lbl}
-                      </span>
-                      <span
-                        className="raj font-bold text-sm"
-                        style={{ color: "#f1f5f9" }}
-                      >
-                        {r.val}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mb-2">
-                  <div className="flex items-center justify-between mb-2">
-                    <label style={labelStyle}>Amount You Sent</label>
-                    <span className="raj text-xs" style={{ color: "#475569" }}>
-                      Min: ${settings?.deposit_limit || 0}
-                    </span>
-                  </div>
-                  <div
-                    className="iw flex items-center gap-3 px-4 py-4 rounded-2xl"
-                    style={{
-                      ...inputWrap,
-                      borderColor: "rgba(245,158,11,0.2)",
-                    }}
-                  >
-                    <CoinLogo wallet={wallet} size={22} />
-                    <input
-                      type="number"
-                      placeholder="0.00"
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                      style={{
-                        flex: 1,
-                        fontWeight: 700,
-                        fontSize: 20,
-                        background: "transparent",
-                        border: "none",
-                        outline: "none",
-                        color: "#f1f5f9",
-                        fontFamily: "'Rajdhani',sans-serif",
-                      }}
-                    />
-                    <span
-                      className="raj font-bold text-sm flex-shrink-0"
-                      style={{ color: "#f59e0b" }}
-                    >
-                      {coinSymbol}
-                    </span>
-                  </div>
-                  {amount && parseFloat(amount) > 0 && (
-                    <div
-                      className="mt-3 rounded-2xl px-4 py-3 flex items-center justify-between"
-                      style={{
-                        background: "rgba(16,185,129,0.07)",
-                        border: "1px solid rgba(16,185,129,0.18)",
-                        animation: "slideUp .2s ease both",
-                      }}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="raj font-semibold text-xs"
-                          style={{ color: "#475569" }}
-                        >
-                          Estimated value
-                        </span>
-                      </div>
-                      {modalPriceLoading ? (
-                        <span
-                          className="raj font-bold text-sm"
-                          style={{ color: "#475569", opacity: 0.7 }}
-                        >
-                          Loading price…
-                        </span>
-                      ) : modalUsdPreview !== null ? (
-                        <div className="flex items-baseline gap-1.5">
-                          <span
-                            className="orb font-black text-base"
-                            style={{ color: "#10b981" }}
-                          >
-                            ≈ ${modalUsdPreview}
-                          </span>
-                          <span
-                            className="raj font-semibold text-xs"
-                            style={{ color: "#475569" }}
-                          >
-                            USD
-                          </span>
-                        </div>
-                      ) : isStablecoin ? (
-                        <div className="flex items-baseline gap-1.5">
-                          <span
-                            className="orb font-black text-base"
-                            style={{ color: "#10b981" }}
-                          >
-                            ≈ ${parseFloat(amount).toFixed(2)}
-                          </span>
-                          <span
-                            className="raj font-semibold text-xs"
-                            style={{ color: "#475569" }}
-                          >
-                            USD
-                          </span>
-                        </div>
-                      ) : (
-                        <span
-                          className="raj font-bold text-sm"
-                          style={{ color: "#64748b" }}
-                        >
-                          Price unavailable
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                <div className="mb-2 mt-4">
-                  <label style={labelStyle}>
-                    Transaction Screenshot (Optional)
-                  </label>
-                  <label
-                    className="flex flex-col items-center justify-center gap-2 py-5 rounded-2xl cursor-pointer"
-                    style={{
-                      background: preview
-                        ? "transparent"
-                        : "rgba(255,255,255,0.02)",
-                      border: `1px dashed ${preview ? "rgba(16,185,129,0.3)" : "rgba(255,255,255,0.1)"}`,
-                      overflow: "hidden",
-                    }}
-                  >
-                    {preview ? (
-                      <img
-                        src={preview}
-                        alt="screenshot"
-                        style={{
-                          width: "100%",
-                          maxHeight: 160,
-                          objectFit: "contain",
-                          borderRadius: 10,
-                        }}
-                      />
-                    ) : (
-                      <>
-                        <svg
-                          width="22"
-                          height="22"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                        >
-                          <path
-                            d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"
-                            stroke="#475569"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                        <p
-                          className="raj font-semibold text-xs"
-                          style={{ color: "#475569" }}
-                        >
-                          Tap to upload screenshot
-                        </p>
-                      </>
-                    )}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      style={{ display: "none" }}
-                      onChange={(e) => {
-                        const file = e.target.files[0];
-                        if (!file) return;
-                        setScreenshot(file);
-                        setPreview(URL.createObjectURL(file));
-                      }}
-                    />
-                  </label>
-                  {preview && (
-                    <button
-                      onClick={() => {
-                        setScreenshot(null);
-                        setPreview(null);
-                      }}
-                      className="raj font-semibold text-xs mt-2 w-full text-center border-none cursor-pointer"
-                      style={{ background: "none", color: "#ef4444" }}
-                    >
-                      Remove screenshot
-                    </button>
-                  )}
-                </div>
-
-                <div
-                  className="my-4 p-3 rounded-xl flex items-start gap-2"
-                  style={{
-                    background: "rgba(245,158,11,0.05)",
-                    border: "1px solid rgba(245,158,11,0.12)",
-                  }}
-                >
-                  <span style={{ fontSize: 14 }}>⚠️</span>
-                  <p
-                    className="raj font-medium text-xs leading-relaxed"
-                    style={{ color: "#64748b" }}
-                  >
-                    Make sure you have already sent {coinSymbol} to your deposit
-                    address. The system will verify your transaction on-chain
-                    automatically.
-                  </p>
-                </div>
-
-                <button
-                  onClick={handleRechargeSubmit}
-                  disabled={!amount}
-                  className="act w-full py-4 rounded-2xl raj font-black text-sm border-none cursor-pointer"
-                  style={{
-                    background:
-                      !amount || parseFloat(amount) <= 0
-                        ? "rgba(255,255,255,0.05)"
-                        : "linear-gradient(135deg,#f59e0b,#f97316)",
-                    color:
-                      !amount || parseFloat(amount) <= 0
-                        ? "#334155"
-                        : "#080810",
-                    letterSpacing: 2,
-                    boxShadow:
-                      !amount || parseFloat(amount) <= 0
-                        ? "none"
-                        : "0 6px 20px rgba(245,158,11,0.3)",
-                    cursor:
-                      !amount || parseFloat(amount) <= 0
-                        ? "not-allowed"
-                        : "pointer",
-                  }}
-                >
-                  VERIFY & SUBMIT
-                </button>
-              </div>
-            )}
-
-            {rechargeStep === 2 && (
-              <div
-                className="p-8 flex flex-col items-center justify-center slide-up"
-                style={{ minHeight: 300 }}
-              >
-                <div
-                  className="w-16 h-16 rounded-full flex items-center justify-center mb-5"
-                  style={{
-                    background: "rgba(245,158,11,0.12)",
-                    border: "2px solid rgba(245,158,11,0.3)",
-                  }}
-                >
-                  <svg
-                    className="spin"
-                    width="28"
-                    height="28"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                  >
-                    <circle
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="rgba(245,158,11,0.2)"
-                      strokeWidth="2.5"
-                    />
-                    <path
-                      d="M12 2a10 10 0 0110 10"
-                      stroke="#f59e0b"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                </div>
-                <p
-                  className="orb font-black text-base mb-2"
-                  style={{ color: "#f1f5f9" }}
-                >
-                  Verifying On-Chain
-                </p>
-                <p
-                  className="raj font-semibold text-sm text-center"
-                  style={{ color: "#475569" }}
-                >
-                  Checking your {coinSymbol} transaction on the blockchain...
-                </p>
-                <p className="raj text-xs mt-3" style={{ color: "#334155" }}>
-                  This may take a few seconds
-                </p>
-              </div>
-            )}
-
-            {rechargeStep === 3 && rechargeResult && (
-              <div className="p-6 slide-up">
-                <div className="flex flex-col items-center mb-6">
-                  {rechargeResult.status === "approved" ? (
-                    <>
-                      <div
-                        className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
-                        style={{
-                          background: "rgba(16,185,129,0.12)",
-                          border: "2px solid rgba(16,185,129,0.3)",
-                        }}
-                      >
-                        <svg
-                          width="28"
-                          height="28"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                        >
-                          <path
-                            d="M20 6L9 17l-5-5"
-                            stroke="#10b981"
-                            strokeWidth="2.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                      </div>
-                      <p
-                        className="orb font-black text-lg mb-1"
-                        style={{ color: "#10b981" }}
-                      >
-                        Deposit Approved!
-                      </p>
-                      <p
-                        className="raj font-semibold text-sm"
-                        style={{ color: "#64748b" }}
-                      >
-                        Your balance has been credited
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <div
-                        className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
-                        style={{
-                          background: "rgba(245,158,11,0.12)",
-                          border: "2px solid rgba(245,158,11,0.3)",
-                        }}
-                      >
-                        <svg
-                          width="28"
-                          height="28"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                        >
-                          <circle
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="#f59e0b"
-                            strokeWidth="2"
-                          />
-                          <path
-                            d="M12 6v6l4 2"
-                            stroke="#f59e0b"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                          />
-                        </svg>
-                      </div>
-                      <p
-                        className="orb font-black text-lg mb-1"
-                        style={{ color: "#f59e0b" }}
-                      >
-                        Pending Confirmation
-                      </p>
-                      <p
-                        className="raj font-semibold text-sm text-center"
-                        style={{ color: "#64748b" }}
-                      >
-                        Transaction not yet confirmed. Will credit automatically
-                        once detected.
-                      </p>
-                    </>
-                  )}
-                </div>
-                <div className="flex flex-col gap-2 mb-6">
-                  {rechargeResult.status === "approved" && (
-                    <>
-                      <div
-                        className="flex items-center justify-between px-4 py-3 rounded-xl"
-                        style={{
-                          background: "rgba(16,185,129,0.06)",
-                          border: "1px solid rgba(16,185,129,0.15)",
-                        }}
-                      >
-                        <span
-                          className="raj font-semibold text-xs"
-                          style={{ color: "#475569" }}
-                        >
-                          Amount Credited
-                        </span>
-                        <span
-                          className="raj font-black text-sm"
-                          style={{ color: "#10b981" }}
-                        >
-                          {rechargeResult.actualAmount} {coinSymbol}
-                        </span>
-                      </div>
-                      <div
-                        className="flex items-center justify-between px-4 py-3 rounded-xl"
-                        style={{
-                          background: "rgba(255,255,255,0.02)",
-                          border: "1px solid rgba(255,255,255,0.06)",
-                        }}
-                      >
-                        <span
-                          className="raj font-semibold text-xs"
-                          style={{ color: "#475569" }}
-                        >
-                          TX Hash
-                        </span>
-                        <span
-                          className="raj font-medium text-xs"
-                          style={{ color: "#64748b" }}
-                        >
-                          {rechargeResult.txHash
-                            ? `${rechargeResult.txHash.slice(0, 10)}...${rechargeResult.txHash.slice(-6)}`
-                            : "—"}
-                        </span>
-                      </div>
-                    </>
-                  )}
-                  {rechargeResult.status === "pending_verification" && (
-                    <div
-                      className="px-4 py-3 rounded-xl text-center"
-                      style={{
-                        background: "rgba(245,158,11,0.05)",
-                        border: "1px solid rgba(245,158,11,0.12)",
-                      }}
-                    >
-                      <p
-                        className="raj font-medium text-xs"
-                        style={{ color: "#64748b" }}
-                      >
-                        The system checks every 30 seconds. You'll be notified
-                        when your deposit is confirmed.
-                      </p>
-                    </div>
-                  )}
-                </div>
-                <button
-                  onClick={closeRechargeModal}
-                  className="act w-full py-4 rounded-2xl raj font-black text-sm border-none cursor-pointer"
-                  style={{
-                    background: "rgba(255,255,255,0.06)",
-                    color: "#f1f5f9",
-                    letterSpacing: 2,
-                  }}
-                >
-                  CLOSE
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ══════════ QR FULLSCREEN MODAL — generated from address ══════════ */}
+      {/* ══════════ QR FULLSCREEN MODAL ══════════ */}
       {qrModalVisible && (
         <div
           className="fixed inset-0 z-50 flex flex-col items-center justify-center"
