@@ -10,7 +10,13 @@ import ProfitStatistics from "./Components/ProfitStatistics/ProfitStatistics";
 import Funds from "./Components/Funds/Funds";
 // import Business from "./Components/Business/Business";
 // import Contact from "./Components/Contact/Contact";
-import { Route, Routes, useLocation, useNavigate } from "react-router";
+import {
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+} from "react-router";
 import { useUser } from "./context/UserContext";
 import Spinner from "./Components/Spinner/Spinner";
 import "react-toastify/dist/ReactToastify.css";
@@ -636,7 +642,7 @@ function App() {
               <Route path="/support" element={<GuestSupport />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
-              <Route path="/*" element={<NotFound />} />
+              <Route path="/*" element={<Navigate to="/login" replace />} />
             </>
           )}
         </Routes>
