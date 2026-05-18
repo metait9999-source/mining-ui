@@ -28,6 +28,22 @@ const ACTIONS = [
     template: (plan, coin, amount) =>
       `Earned ${amount} ${coin} from ${plan} plan`,
   },
+  // ✅ new withdraw actions
+  {
+    type: "withdraw",
+    template: (plan, coin, amount) =>
+      `Withdrew ${amount} ${coin} to external wallet`,
+  },
+  {
+    type: "withdraw",
+    template: (plan, coin, amount) =>
+      `Withdrawal of ${amount} ${coin} processed successfully`,
+  },
+  {
+    type: "withdraw",
+    template: (plan, coin, amount) =>
+      `${amount} ${coin} withdrawal confirmed on-chain`,
+  },
 ];
 
 const DOMAINS = [
@@ -85,6 +101,13 @@ const ICON_MAP = {
     bg: "rgba(249,115,22,0.12)",
     border: "rgba(249,115,22,0.25)",
   },
+  // ✅ withdraw style
+  withdraw: {
+    icon: "🏧",
+    color: "#ef4444",
+    bg: "rgba(239,68,68,0.12)",
+    border: "rgba(239,68,68,0.25)",
+  },
 };
 
 function randomInt(min, max) {
@@ -102,7 +125,6 @@ function randomAmount(coin) {
 }
 
 function maskEmail() {
-  // e.g. "ab*****yz@gmail.com"
   const prefixLen = randomInt(4, 9);
   const prefix = Array.from(
     { length: prefixLen },
@@ -151,12 +173,10 @@ export default function LiveNotification() {
     setCurrent(generateNotification());
     setVisible(true);
 
-    // Start leave animation after 4.5s
     const leaveTimer = setTimeout(() => {
       setLeaving(true);
     }, 4500);
 
-    // Hide fully after 5.2s
     const hideTimer = setTimeout(() => {
       setVisible(false);
     }, 5200);
@@ -168,17 +188,14 @@ export default function LiveNotification() {
   };
 
   useEffect(() => {
-    // First show after 2s
     const first = setTimeout(() => {
       showNext();
     }, 2000);
-
     return () => clearTimeout(first);
   }, []);
 
   useEffect(() => {
     if (!visible && current) {
-      // Wait 3s between toasts then show next
       const next = setTimeout(() => {
         showNext();
       }, 3000);

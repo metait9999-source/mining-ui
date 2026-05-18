@@ -1,7 +1,9 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "../../context/UserContext";
 import useWallets from "../../hooks/useWallets";
+import { getUserMiningSubscriptions } from "../../api/mining.api";
+import { getUserSubscriptions } from "../../api/arbitrage.api";
 import AppNav from "./Navbar";
 
 const Icons = {
@@ -228,6 +230,61 @@ export default function Home() {
   const total =
     wallets?.reduce((s, w) => s + parseFloat(w.coin_amount || 0), 0) ?? 0;
 
+  const [activePlans, setActivePlans] = useState(0);
+  const [todayEarned, setTodayEarned] = useState("0.00");
+  const [plansLoading, setPlansLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const fetchPlans = async () => {
+      try {
+        setPlansLoading(true);
+        const [miningRes, arbRes] = await Promise.all([
+          getUserMiningSubscriptions(user.id),
+          getUserSubscriptions(user.id),
+        ]);
+
+        const mSubs = miningRes.data || [];
+        const aSubs = arbRes.data || [];
+
+        // active plan count
+        const mActive = mSubs.filter((s) => s.status === "active").length;
+        const aActive = aSubs.filter((s) => s.status === "active").length;
+        setActivePlans(mActive + aActive);
+
+        // today's earnings
+        const today = new Date().toDateString();
+
+        const mToday = mSubs
+          .filter(
+            (s) =>
+              s.last_paid_at &&
+              new Date(s.last_paid_at).toDateString() === today,
+          )
+          .reduce((sum, s) => sum + parseFloat(s.daily_earnings || 0), 0);
+
+        const aToday = aSubs
+          .filter(
+            (s) =>
+              s.last_paid_at &&
+              new Date(s.last_paid_at).toDateString() === today,
+          )
+          .reduce(
+            (sum, s) =>
+              sum + (parseFloat(s.amount) * parseFloat(s.daily_rate)) / 100,
+            0,
+          );
+
+        setTodayEarned((mToday + aToday).toFixed(2));
+      } catch {
+        // silently fail
+      } finally {
+        setPlansLoading(false);
+      }
+    };
+    fetchPlans();
+  }, [user?.id]);
+
   return (
     <div
       className="min-h-screen pb-12"
@@ -354,6 +411,7 @@ export default function Home() {
                     )}
                   </div>
                 </div>
+
                 <div className="flex flex-col gap-3 sm:items-end">
                   <button
                     onClick={() => navigate("/account")}
@@ -368,10 +426,20 @@ export default function Home() {
                   >
                     + DEPOSIT
                   </button>
+
+                  {/* ✅ dynamic chips */}
                   <div className="flex gap-2">
                     {[
-                      { lbl: "Today", val: "$0.00", color: "#10b981" },
-                      { lbl: "Plans", val: "0", color: "#f59e0b" },
+                      {
+                        lbl: "Today",
+                        val: plansLoading ? "..." : `$${todayEarned}`,
+                        color: "#10b981",
+                      },
+                      {
+                        lbl: "Plans",
+                        val: plansLoading ? "..." : `${activePlans}`,
+                        color: "#f59e0b",
+                      },
                     ].map((s) => (
                       <div
                         key={s.lbl}
@@ -576,66 +644,6 @@ export default function Home() {
                 </div>
               </div>
             </div>
-            {/* 
-            <div
-              className="sc rounded-3xl relative overflow-hidden"
-              style={{
-                background: "linear-gradient(150deg,#170f1e,#0d0d1a)",
-                border: "1px solid rgba(168,85,247,0.18)",
-              }}
-              onClick={() => navigate("/referral-list")}
-            >
-              <div
-                className="absolute top-0 inset-x-0 h-0.5"
-                style={{
-                  background:
-                    "linear-gradient(90deg,#a855f7,#ec4899,transparent)",
-                }}
-              />
-              <div
-                className="absolute bottom-0 right-0 w-28 h-28 pointer-events-none rounded-full"
-                style={{
-                  background:
-                    "radial-gradient(circle,rgba(168,85,247,.14),transparent 70%)",
-                  transform: "translate(30%,30%)",
-                }}
-              />
-              <div className="px-6 py-7">
-                <div
-                  className="w-12 h-12 rounded-2xl flex items-center justify-center mb-5 fc"
-                  style={{
-                    background: "rgba(168,85,247,.1)",
-                    border: "1px solid rgba(168,85,247,.2)",
-                    color: "#a855f7",
-                  }}
-                >
-                  {Icons.users}
-                </div>
-                <h3 className="orb font-black text-lg mb-2 text-white">
-                  Invite & Earn
-                </h3>
-                <p
-                  className="raj font-medium text-sm mb-5 leading-relaxed"
-                  style={{ color: "#64748b" }}
-                >
-                  Refer friends and earn multi-level commissions on every
-                  deposit they make.
-                </p>
-                <div className="flex items-center justify-between">
-                  <span
-                    className="raj font-bold text-xs px-3 py-1.5 rounded-full"
-                    style={{
-                      background: "rgba(168,85,247,.1)",
-                      color: "#a855f7",
-                      border: "1px solid rgba(168,85,247,.2)",
-                    }}
-                  >
-                    MULTI-LEVEL
-                  </span>
-                  <span style={{ color: "#a855f7" }}>{Icons.arrow}</span>
-                </div>
-              </div>
-            </div> */}
           </div>
         </div>
 

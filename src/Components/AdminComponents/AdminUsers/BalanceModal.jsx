@@ -1,50 +1,39 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import useWallets from "../../../hooks/useWallets";
-import useCryptoTradeConverter from "../../../hooks/userCryptoTradeConverter";
 import { useUpdateUserBalance } from "../../../hooks/useUpdateUserBalance";
 import { IoClose } from "react-icons/io5";
 import { MdOutlineAccountBalanceWallet } from "react-icons/md";
 import { FiEdit2, FiCheck } from "react-icons/fi";
 
 const BalanceModal = ({ isOpen, onClose, details }) => {
-  const { wallets } = useWallets(details?.id);
-  const [coinValues, setCoinValues] = useState({});
-  const { convertCoinToUSDT, convertUSDTToCoin, loading } =
-    useCryptoTradeConverter();
+  const { wallets, refetch } = useWallets(details?.id);
   const { updateUserBalance } = useUpdateUserBalance();
-  const [editingCoinId, setEditingCoinId] = useState(null);
-  const [newCoinAmount, setNewCoinAmount] = useState("");
+  const [editingId, setEditingId] = useState(null);
+  const [newAmount, setNewAmount] = useState("");
+  const [savingId, setSavingId] = useState(null);
 
-  useEffect(() => {
-    const fetchConvertedValues = async () => {
-      if (wallets?.length > 0) {
-        const newCoinValues = {};
-        for (const wallet of wallets) {
-          try {
-            const converted = await convertUSDTToCoin(
-              wallet?.coin_amount,
-              wallet.coin_id,
-            );
-            newCoinValues[wallet.coin_id] = converted;
-          } catch {
-            newCoinValues[wallet.coin_id] = null;
-          }
-        }
-        setCoinValues(newCoinValues);
-      }
-    };
-    fetchConvertedValues();
-  }, [wallets]);
-
-  const handleSave = async (coinId) => {
+  const handleSave = async (wallet) => {
+    if (!newAmount || isNaN(newAmount)) return;
+    setSavingId(wallet.id);
     try {
-      const convertedUSDT = await convertCoinToUSDT(newCoinAmount, coinId);
-      await updateUserBalance(details?.id, coinId, convertedUSDT);
-      setCoinValues((prev) => ({ ...prev, [coinId]: newCoinAmount }));
-      setEditingCoinId(null);
+      await updateUserBalance(
+        details?.id,
+        wallet.coin_id,
+        parseFloat(newAmount),
+      );
+      setEditingId(null);
+      setNewAmount("");
+      refetch?.(); // refresh wallets after update if supported
     } catch {
       console.error("Error updating balance");
+    } finally {
+      setSavingId(null);
     }
+  };
+
+  const handleCancel = () => {
+    setEditingId(null);
+    setNewAmount("");
   };
 
   if (!isOpen) return null;
@@ -96,7 +85,7 @@ const BalanceModal = ({ isOpen, onClose, details }) => {
                     "Logo",
                     "Name",
                     "Symbol",
-                    "Balance",
+                    "Balance (USD)",
                     "Total Deposit",
                     "Total Withdraw",
                   ].map((h) => (
@@ -115,6 +104,7 @@ const BalanceModal = ({ isOpen, onClose, details }) => {
                     key={wallet.id}
                     className="hover:bg-gray-50/60 transition-colors"
                   >
+                    {/* Logo */}
                     <td className="px-4 py-3">
                       <div className="w-8 h-8 rounded-full bg-gray-100 border border-gray-200 overflow-hidden flex items-center justify-center">
                         <img
@@ -127,50 +117,56 @@ const BalanceModal = ({ isOpen, onClose, details }) => {
                         />
                       </div>
                     </td>
+
+                    {/* Name */}
                     <td className="px-4 py-3 text-gray-800 font-medium whitespace-nowrap">
                       {wallet?.coin_name}
                     </td>
+
+                    {/* Symbol */}
                     <td className="px-4 py-3">
                       <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
                         {wallet?.coin_symbol}
                       </span>
                     </td>
+
+                    {/* Balance (USD) — editable */}
                     <td className="px-4 py-3">
-                      {loading ? (
-                        <span className="text-gray-400 text-[12px]">
-                          Loading…
-                        </span>
-                      ) : editingCoinId === wallet.coin_id ? (
+                      {editingId === wallet.id ? (
                         <div className="flex items-center gap-1.5">
                           <input
-                            type="text"
-                            value={newCoinAmount}
-                            onChange={(e) => setNewCoinAmount(e.target.value)}
-                            onBlur={() => handleSave(wallet.coin_id)}
-                            onKeyDown={(e) =>
-                              e.key === "Enter" && handleSave(wallet.coin_id)
-                            }
-                            className="w-24 px-2 py-1 text-[12px] border border-indigo-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/25"
+                            type="number"
+                            value={newAmount}
+                            onChange={(e) => setNewAmount(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") handleSave(wallet);
+                              if (e.key === "Escape") handleCancel();
+                            }}
+                            className="w-28 px-2 py-1 text-[12px] border border-indigo-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/25"
                             autoFocus
                           />
                           <button
-                            onClick={() => handleSave(wallet.coin_id)}
-                            className="w-6 h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center hover:bg-indigo-700 transition-colors flex-shrink-0"
+                            onClick={() => handleSave(wallet)}
+                            disabled={savingId === wallet.id}
+                            className="w-6 h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center hover:bg-indigo-700 transition-colors flex-shrink-0 disabled:opacity-50"
                           >
-                            <FiCheck size={11} />
+                            {savingId === wallet.id ? (
+                              <span className="w-2.5 h-2.5 border border-white border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                              <FiCheck size={11} />
+                            )}
                           </button>
                         </div>
                       ) : (
                         <button
                           onClick={() => {
-                            setEditingCoinId(wallet.coin_id);
-                            setNewCoinAmount(coinValues[wallet.coin_id] ?? "");
+                            setEditingId(wallet.id);
+                            setNewAmount(wallet.coin_amount ?? "");
                           }}
                           className="flex items-center gap-1.5 text-[12px] text-gray-700 hover:text-indigo-600 group"
                         >
                           <span>
-                            {coinValues[wallet.coin_id] ?? "N/A"}{" "}
-                            {wallet.coin_symbol}
+                            ${parseFloat(wallet.coin_amount ?? 0).toFixed(2)}
                           </span>
                           <FiEdit2
                             size={11}
@@ -179,9 +175,13 @@ const BalanceModal = ({ isOpen, onClose, details }) => {
                         </button>
                       )}
                     </td>
+
+                    {/* Total Deposit */}
                     <td className="px-4 py-3 text-gray-600">
                       {wallet?.total_deposits}
                     </td>
+
+                    {/* Total Withdraw */}
                     <td className="px-4 py-3 text-gray-600">
                       {wallet?.total_withdrawals}
                     </td>
